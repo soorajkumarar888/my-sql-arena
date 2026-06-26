@@ -23,3 +23,14 @@ This repository serves as a hands-on practice ground to understand how relationa
 │   ├── intermediate/      # JOIN operations, Grouping, and Text Matching
 │   └── advanced/          # Subqueries, Correlated Subqueries, and Complex Analytics
 └── README.md
+
+
+### 74. Find the average height of patients who do not live in 'Toronto', grouped by province.
+* **Concepts Covered:** Row-level filtering (`WHERE`), Grouping (`GROUP BY`), Aggregation (`AVG`).
+
+```sql
+SELECT pr.province_name, AVG(p.height) AS avg_height
+FROM patients p 
+JOIN province_names pr ON p.province_id = pr.province_id
+WHERE p.city NOT IN ('Toronto')
+GROUP BY pr.province_name;
