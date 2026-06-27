@@ -54,7 +54,7 @@ WHERE weight >= 100 AND weight <= 120;
 '''
 
 ### 5. Update the patients table for the allergies column. If the patient's allergies is null then replace it with 'NKA'.
-* **Concepts Covered:** Data Modification (UPDATE), Null Handling (IS NULL, COALESCE), Query Performance Optimization.
+* **Concepts Covered:** Data Modification (`UPDATE`), Null Handling (`IS NULL`, `COALESCE`), Query Performance Optimization.
 
 ```sql
 -- Method 1: Using WHERE Clause (Best Practice & Safe for Production)
@@ -65,3 +65,4 @@ WHERE allergies IS NULL;
 -- Method 2: Using COALESCE (Alternative, but warns: rewrites the whole table!)
 UPDATE patients 
 SET allergies = COALESCE(allergies, 'NKA');
+```
