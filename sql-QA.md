@@ -52,7 +52,6 @@ SELECT first_name, last_name
 FROM patients 
 WHERE weight >= 100 AND weight <= 120;
 '''
-
 ### 5. Update the patients table for the allergies column. If the patient's allergies is null then replace it with 'NKA'.
 * **Concepts Covered:** Data Modification (`UPDATE`), Null Handling (`IS NULL`, `COALESCE`), Query Performance Optimization.
 
