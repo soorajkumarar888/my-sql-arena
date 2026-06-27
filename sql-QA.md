@@ -8,7 +8,7 @@ SELECT
     gender
 FROM patients 
 WHERE gender = 'M';
-
+```
 ### 2. Show first name and last name of patients who do not have allergies.
 * **Concepts Covered:** Missing Data Handling (`IS NULL`).
 
@@ -18,3 +18,4 @@ SELECT
     last_name 
 FROM patients 
 WHERE allergies IS NULL;
+```
