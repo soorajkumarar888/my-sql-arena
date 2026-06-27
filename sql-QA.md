@@ -65,3 +65,39 @@ WHERE allergies IS NULL;
 UPDATE patients 
 SET allergies = COALESCE(allergies, 'NKA');
 ```
+### 6. Show first name and last name concatenated into one column to show their full name.
+* **Concepts Covered:** String Manipulation (`CONCAT`, `CONCAT_WS`), Column Aliasing (`AS`).
+
+```sql
+-- Method 1: Using CONCAT_WS (Best Practice - Handles NULLs gracefully)
+SELECT CONCAT_WS(' ', first_name, last_name) AS full_name
+FROM patients;
+
+-- Method 2: Using Standard CONCAT
+SELECT CONCAT(first_name, ' ', last_name) AS full_name
+FROM patients;
+
+-- Method 3: Using Standard SQL Pipe Operator (Alternative)
+SELECT first_name || ' ' || last_name AS full_name
+FROM patients;
+```
+### 7. Show first name, last name, and the full province name of each patient.
+* **Concepts Covered:** Table Joins (`JOIN`), Table Aliasing.
+
+```sql
+SELECT 
+    p.first_name, 
+    p.last_name, 
+    pr.province_name 
+FROM patients p 
+JOIN province_names pr 
+    ON p.province_id = pr.province_id;
+```
+### 8. Show how many patients have a birth_date with 2010 as the birth year.
+* **Concepts Covered:** Aggregate Functions (`COUNT`), Date Functions (`YEAR`), Row Filtering (`WHERE`).
+
+```sql
+SELECT COUNT(patient_id) AS total_patients 
+FROM patients 
+WHERE YEAR(birth_date) = 2010;
+```
