@@ -19,3 +19,22 @@ SELECT
 FROM patients 
 WHERE allergies IS NULL;
 ```
+### 3. Show first name of patients that start with the letter 'C'.
+* **Concepts Covered:** Pattern Matching (`LIKE`), Wildcard Filtering (`%`), String Functions (`LEFT`, `SUBSTRING`).
+
+```sql
+-- Method 1: Standard Wildcard (Recommended)
+SELECT first_name 
+FROM patients 
+WHERE first_name LIKE 'C%';
+
+-- Method 2: Using LEFT function
+SELECT first_name 
+FROM patients 
+WHERE LEFT(first_name, 1) = 'C';
+
+-- Method 3: Using SUBSTRING function
+SELECT first_name 
+FROM patients 
+WHERE SUBSTRING(first_name, 1, 1) = 'C';
+```
