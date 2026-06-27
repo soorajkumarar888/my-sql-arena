@@ -101,3 +101,41 @@ SELECT COUNT(patient_id) AS total_patients
 FROM patients 
 WHERE YEAR(birth_date) = 2010;
 ```
+### 9. Show the first_name, last_name, and height of the patient with the greatest height.
+* **Concepts Covered:** Sorting Data (`ORDER BY`), Limiting Results (`LIMIT`).
+
+```sql
+SELECT first_name, last_name, height 
+FROM patients 
+ORDER BY height DESC 
+LIMIT 1;
+```
+### 10. Show all columns for patients who have one of the following patient_ids: 1, 45, 134, 90, 3.
+* **Concepts Covered:** List Filtering (`IN`), Wildcard Selection (`*`).
+
+```sql
+SELECT * FROM patients 
+WHERE patient_id IN (1, 45, 134, 90, 3);
+```
+### 11. Show the total number of admissions.
+* **Concepts Covered:** Aggregate Functions (`COUNT`).
+
+```sql
+SELECT COUNT(admission_date) AS total_admissions 
+FROM admissions;
+```
+### 12. Show all the columns from admissions where the patient was admitted and discharged on the same day.
+* **Concepts Covered:** Column-to-Column Comparison, Row Filtering (`WHERE`).
+
+```sql
+SELECT * FROM admissions 
+WHERE admission_date = discharge_date;
+```
+### 13. Show the total number of admissions for patient_id 9.
+* **Concepts Covered:** Aggregate Functions (`COUNT`), Row Filtering (`WHERE`).
+
+```sql
+SELECT COUNT(*) AS total_admissions 
+FROM admissions 
+WHERE patient_id = 9;
+```
