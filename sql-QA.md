@@ -139,3 +139,46 @@ SELECT COUNT(*) AS total_admissions
 FROM admissions 
 WHERE patient_id = 9;
 ```
+### 14. Based on the cities that our patients live in, show unique cities that are in province_id 'NS'.
+* **Concepts Covered:** Duplicate Removal (`DISTINCT`), Row Filtering (`WHERE`).
+
+```sql
+SELECT DISTINCT city 
+FROM patients 
+WHERE province_id = 'NS';
+```
+### 15. Write a query to find the first_name, last name and birth date of patients who have height more than 160 and weight more than 70.
+* **Concepts Covered:** Row Filtering (`WHERE`), Logical Conjunction (`AND`), Comparison Operators (`>`).
+
+```sql
+SELECT first_name, last_name, birth_date 
+FROM patients 
+WHERE height > 160 AND weight > 70;
+```
+### 16. Show unique birth years from patients and order them by ascending.
+* **Concepts Covered:** Date Extraction (`YEAR`), Duplicate Removal (`DISTINCT`), Sorting Data (`ORDER BY ... ASC`).
+
+```sql
+SELECT DISTINCT YEAR(birth_date) AS years 
+FROM patients 
+ORDER BY years ASC;
+```
+### 17. Show unique first names from the patients table which only occurs once in the list.
+* **Concepts Covered:** Grouping Data (`GROUP BY`), Group Filtering (`HAVING`), Aggregate Counting (`COUNT`).
+
+```sql
+SELECT first_name 
+FROM patients 
+GROUP BY first_name 
+HAVING COUNT(*) = 1;
+```
+### 18. Show patient_id and first_name from patients where their first_name starts and ends with 's' and is at least 6 characters long.
+* **Concepts Covered:** String Functions (`LEFT`, `RIGHT`, `LENGTH`), Comparison Operators (`>=`), Row Filtering (`WHERE`).
+
+```sql
+SELECT patient_id, first_name 
+FROM patients 
+WHERE LEFT(first_name, 1) = 's' 
+  AND RIGHT(first_name, 1) = 's' 
+  AND LENGTH(first_name) >= 6;
+```
