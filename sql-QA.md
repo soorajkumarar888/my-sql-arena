@@ -182,3 +182,118 @@ WHERE LEFT(first_name, 1) = 's'
   AND RIGHT(first_name, 1) = 's' 
   AND LENGTH(first_name) >= 6;
 ```
+### 19. Show patient_id, first_name, last_name from patients whose diagnosis is 'Cardiac Arrest'.
+* **Concepts Covered:** Table Joins (`JOIN`), Join Conditions (`ON`), Row Filtering (`WHERE`).
+
+```sql
+SELECT 
+    p.patient_id, 
+    p.first_name, 
+    p.last_name 
+FROM patients p 
+JOIN admissions a 
+    ON p.patient_id = a.patient_id 
+WHERE a.diagnosis = 'Cardiac Arrest';
+```
+### 20. Display every patient's first_name. Order the list by the length of each name and then by alphabetically.
+* **Concepts Covered:** Sorting Data (`ORDER BY`), Multi-Column Sorting, String Length (`LENGTH`).
+
+```sql
+SELECT first_name 
+FROM patients 
+ORDER BY LENGTH(first_name), first_name;
+```
+### 21. Show the total number of male patients and the total number of female patients in the patients table. Display the two results in the same row.
+* **Concepts Covered:** Conditional Aggregation (`SUM` with `CASE WHEN`), Column Aliasing (`AS`).
+
+```sql
+SELECT 
+    SUM(CASE WHEN gender = 'M' THEN 1 ELSE 0 END) AS male,
+    SUM(CASE WHEN gender = 'F' THEN 1 ELSE 0 END) AS female
+FROM patients;
+```
+### 22. Show patient_id, diagnosis from admissions. Find patients admitted multiple times for the same diagnosis.
+* **Concepts Covered:** Multi-Column Grouping (`GROUP BY`), Group Filtering (`HAVING`), Aggregate Counting (`COUNT`).
+
+```sql
+SELECT 
+    patient_id, 
+    diagnosis 
+FROM admissions 
+GROUP BY 
+    patient_id, 
+    diagnosis 
+HAVING COUNT(*) > 1;
+```
+### 23. Show the city and the total number of patients in the city. Order from most to least patients and then by city name ascending.
+* **Concepts Covered:** Grouping (`GROUP BY`), Column Aliasing (`AS`), Multi-Column Sorting using Alias Names.
+
+```sql
+SELECT 
+    city, 
+    COUNT(patient_id) AS total_patients 
+FROM patients 
+GROUP BY city 
+ORDER BY 
+    total_patients DESC, 
+    city ASC;
+```
+### 24. Show first name, last name and role of every person that is either patient or doctor. The roles are either "Patient" or "Doctor"
+* **Concepts Covered:** Combining Datasets (`UNION ALL`), Hardcoded String Literals, Column Aliasing.
+
+```sql
+SELECT 
+    first_name, 
+    last_name, 
+    'Patient' AS role 
+FROM patients  
+UNION ALL
+SELECT 
+    first_name, 
+    last_name, 
+    'Doctor' AS role 
+FROM doctors;
+```
+### 25. Show all allergies ordered by popularity. Remove NULL values from the query.
+* **Concepts Covered:** Filtering Missing Data (`IS NOT NULL`), Grouping (`GROUP BY`), Sorting by Aggregate Calculations (`ORDER BY COUNT(*)`).
+
+```sql
+SELECT allergies 
+FROM patients 
+WHERE allergies IS NOT NULL 
+GROUP BY allergies 
+ORDER BY COUNT(*) DESC;
+```
+### 26. Show all patient's first_name, last_name, and birth_date who were born in the 1970s decade. Sort the list starting from the earliest birth_date
+* **Concepts Covered:** Date Extraction (`YEAR()`), Range Filtering (`BETWEEN`), Chronological Sorting (`ORDER BY`).
+
+```sql
+SELECT 
+    first_name, 
+    last_name, 
+    birth_date 
+FROM patients 
+WHERE YEAR(birth_date) BETWEEN 1970 AND 1979
+ORDER BY birth_date;
+```
+### 27. Display each patient's full name in a single column (LAST_NAME,first_name) with specific casing rules, sorted by first_name descending.
+* **Concepts Covered:** String Concatenation (`CONCAT_WS`), Casing Transformations (`UPPER`/`LOWER`), Sorting Data (`ORDER BY DESC`).
+
+```sql
+SELECT 
+    CONCAT_WS(',', UPPER(last_name), LOWER(first_name)) AS full_name 
+FROM patients 
+ORDER BY first_name DESC;
+```
+### 28. Show the province_id(s), sum of height; where the total sum of its patient's height is greater than or equal to 5000.
+* **Concepts Covered:** Aggregation (`SUM`), Grouping (`GROUP BY`), Group-Level Filtering (`HAVING`).
+
+```sql
+SELECT 
+    province_id, 
+    SUM(height) AS total_height 
+FROM patients 
+GROUP BY province_id 
+HAVING SUM(height) >= 5000;
+```
+
