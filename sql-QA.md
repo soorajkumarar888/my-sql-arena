@@ -407,4 +407,14 @@ JOIN doctors d ON a.attending_doctor_id = d.doctor_id
 WHERE a.diagnosis = 'Cardiac Arrest' 
   AND d.first_name = 'john';
 ```
+### 34. Show the patient_id and temp_password for patients who have gone through admissions.
+* **Concepts Covered:** String Manipulation (`CONCAT`, `LENGTH`), Date Extraction (`YEAR`), Aggregation Grouping (`GROUP BY`).
 
+```sql
+SELECT 
+    p.patient_id, 
+    CONCAT(p.patient_id, LENGTH(p.last_name), YEAR(p.birth_date)) AS temp_password
+FROM patients p
+JOIN admissions a ON p.patient_id = a.patient_id
+GROUP BY p.patient_id;
+```
