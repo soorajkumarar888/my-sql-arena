@@ -296,4 +296,85 @@ FROM patients
 GROUP BY province_id 
 HAVING SUM(height) >= 5000;
 ```
+### 29. Show the difference between the largest weight and smallest weight for patients with the last name 'Maroni'
+* **Concepts Covered:** Aggregate Math (`MAX` / `MIN`), Inline Subtraction, Specific Row Filtering (`WHERE`).
+
+```sql
+SELECT 
+    MAX(weight) - MIN(weight) AS diff_weight 
+FROM patients 
+WHERE last_name = 'Maroni';
+```
+### 30. Show all of the days of the month (1-31) and how many admission_dates occurred on that day. Sort by the day with most admissions to least admissions.
+* **Concepts Covered:** Date Part Extraction (`DAY()`), Row Aggregation (`COUNT(*)`), Evaluation-Level Grouping (`GROUP BY function`), Sorting by Aggregate Calculations (`ORDER BY DESC`).
+
+```sql
+SELECT 
+    DAY(admission_date) AS day, 
+    COUNT(*) AS total_no_of_admissions 
+FROM admissions 
+GROUP BY DAY(admission_date)
+ORDER BY total_no_of_admissions DESC;
+```
+### 31. Show all of the patients grouped into weight groups. Show the total number of patients in each weight group. Order the list by the weight group descending. e.g. if they weigh 100 to 109 they are placed in the 100 weight group, 110-119 = 110 weight group, etc.
+* **Concepts Covered:** Conditional Bucketing (`CASE WHEN`), Row Counting (`COUNT(*)`), MySQL Alias Grouping, Descending Sorting (`ORDER BY DESC`).
+* works on latest version because here GROUP BY will get internally executed before CASE WHEN 
+
+```sql
+SELECT
+    CASE
+        WHEN weight BETWEEN 50 AND 59 THEN '50 weight group'
+        WHEN weight BETWEEN 60 AND 69 THEN '60 weight group'
+        WHEN weight BETWEEN 70 AND 79 THEN '70 weight group'
+        WHEN weight BETWEEN 80 AND 89 THEN '80 weight group'
+        WHEN weight BETWEEN 90 AND 99 THEN '90 weight group'
+        WHEN weight BETWEEN 100 AND 109 THEN '100 weight group'
+        WHEN weight BETWEEN 110 AND 119 THEN '110 weight group'
+        WHEN weight >= 120 THEN '120 weight group'
+    END AS weight_groups,
+    COUNT(*) AS total_patients
+FROM patients
+GROUP BY weight_groups
+ORDER BY weight_groups DESC;
+```
+* works on latest version because here GROUP BY will get internally executed before CASE WHEN ---> to tackle this use below
+SELECT 
+    CASE
+        WHEN weight BETWEEN 50 AND 59 THEN '50 weight group'
+        WHEN weight BETWEEN 60 AND 69 THEN '60 weight group'
+        WHEN weight BETWEEN 70 AND 79 THEN '70 weight group'
+        WHEN weight BETWEEN 80 AND 89 THEN '80 weight group'
+        WHEN weight BETWEEN 90 AND 99 THEN '90 weight group'
+        WHEN weight BETWEEN 100 AND 109 THEN '100 weight group'
+        WHEN weight BETWEEN 110 AND 119 THEN '110 weight group'
+        ELSE '120 weight group'
+    END AS weight_groups,
+    COUNT(*) AS total_patients
+FROM patients
+GROUP BY 
+    CASE
+        WHEN weight BETWEEN 50 AND 59 THEN '50 weight group'
+        WHEN weight BETWEEN 60 AND 69 THEN '60 weight group'
+        WHEN weight BETWEEN 70 AND 79 THEN '70 weight group'
+        WHEN weight BETWEEN 80 AND 89 THEN '80 weight group'
+        WHEN weight BETWEEN 90 AND 99 THEN '90 weight group'
+        WHEN weight BETWEEN 100 AND 109 THEN '100 weight group'
+        WHEN weight BETWEEN 110 AND 119 THEN '110 weight group'
+        ELSE '120 weight group'
+    END
+ORDER BY weight_groups DESC; 
+```
+### Method 2: The Professional Integer Division Way
+If you want an elegant approach that matches the exact output logic without typing every single numeric range manually, developers often use **Integer Division**. 
+In SQL, dividing an integer truncates the decimal (e.g., `105 / 10 = 10`). Multiplying it by 10 snaps it perfectly to its floor base (`10 * 10 = 100`).
+* **Concepts Covered:** Mathematical Truncation/Floor Grouping, Dynamic Column Creation, Descending Sorting (`ORDER BY DESC`).
+
+```sql
+SELECT 
+    (weight / 10) * 10 AS weight_group,
+    COUNT(*) AS total_patients
+FROM patients
+GROUP BY weight_group
+ORDER BY weight_group DESC;
+```
 
