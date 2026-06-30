@@ -318,9 +318,11 @@ ORDER BY total_no_of_admissions DESC;
 ```
 ### 31. Show all of the patients grouped into weight groups. Show the total number of patients in each weight group. Order the list by the weight group descending. e.g. if they weigh 100 to 109 they are placed in the 100 weight group, 110-119 = 110 weight group, etc.
 * **Concepts Covered:** Conditional Bucketing (`CASE WHEN`), Row Counting (`COUNT(*)`), MySQL Alias Grouping, Descending Sorting (`ORDER BY DESC`).
-* works on latest version because here GROUP BY will get internally executed before CASE WHEN 
+ --works on latest version because here GROUP BY will get internally executed before CASE WHEN 
 
 ```sql
+--Method 1
+ --works on latest version because here GROUP BY will get internally executed before CASE WHEN 
 SELECT
     CASE
         WHEN weight BETWEEN 50 AND 59 THEN '50 weight group'
@@ -337,7 +339,9 @@ FROM patients
 GROUP BY weight_groups
 ORDER BY weight_groups DESC;
 ```
-* works on latest version because here GROUP BY will get internally executed before CASE WHEN ---> to tackle this use below
+```sql
+--Method 2
+--To tackle execution workflow use this
 SELECT 
     CASE
         WHEN weight BETWEEN 50 AND 59 THEN '50 weight group'
@@ -364,12 +368,9 @@ GROUP BY
     END
 ORDER BY weight_groups DESC; 
 ```
-### Method 2: The Professional Integer Division Way
-If you want an elegant approach that matches the exact output logic without typing every single numeric range manually, developers often use **Integer Division**. 
-In SQL, dividing an integer truncates the decimal (e.g., `105 / 10 = 10`). Multiplying it by 10 snaps it perfectly to its floor base (`10 * 10 = 100`).
-* **Concepts Covered:** Mathematical Truncation/Floor Grouping, Dynamic Column Creation, Descending Sorting (`ORDER BY DESC`).
-
 ```sql
+--Method 3
+-- perfect one
 SELECT 
     (weight / 10) * 10 AS weight_group,
     COUNT(*) AS total_patients
