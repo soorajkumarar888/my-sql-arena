@@ -378,4 +378,33 @@ FROM patients
 GROUP BY weight_group
 ORDER BY weight_group DESC;
 ```
+### 32. Show patient_id, weight, height, isObese from the patients table. Display isObese as a boolean 0 or 1.
+* **Concepts Covered:** Unit Conversion, Arithmetic Order of Operations, Conditional Flagging (`CASE WHEN`).
+
+```sql
+SELECT 
+    patient_id, 
+    weight, 
+    height,
+    CASE 
+        WHEN weight / ((height / 100.0) * (height / 100.0)) >= 30 THEN 1 
+        ELSE 0 
+    END AS isObese
+FROM patients;
+```
+### 33. Show patient_id, first_name, last_name, and attending doctor's specialty. Show only the patients who has a diagnosis as 'Cardiac Arrest' and the doctor's first name is 'john'.
+* **Concepts Covered:** Three-Table Joins (`JOIN`), Explicit Column Aliasing, Multi-Condition Filtering (`WHERE AND`).
+
+```sql
+SELECT 
+    p.patient_id, 
+    p.first_name, 
+    p.last_name, 
+    d.speciality 
+FROM patients p 
+JOIN admissions a ON p.patient_id = a.patient_id 
+JOIN doctors d ON a.attending_doctor_id = d.doctor_id
+WHERE a.diagnosis = 'Cardiac Arrest' 
+  AND d.first_name = 'john';
+```
 
