@@ -418,3 +418,27 @@ FROM patients p
 JOIN admissions a ON p.patient_id = a.patient_id
 GROUP BY p.patient_id;
 ```
+### 35. Show first name, last name, and city of patients who live in either 'Hamilton' or 'Toronto' and have a weight over 80kg.
+* **Concepts Covered:** Logical Filtering (`AND`, `OR`), Membership Filtering (`IN`), Conditional Parentheses Precedence.
+
+#### Method 1: Explicit Logical OR (Standard)
+```sql
+SELECT 
+    first_name, 
+    last_name, 
+    city 
+FROM patients 
+WHERE (city = 'Hamilton' OR city = 'Toronto') 
+  AND weight > 80;
+```
+#### Method 2: Using IN
+```sql
+SELECT 
+    first_name, 
+    last_name, 
+    city 
+FROM patients 
+WHERE city IN ('Hamilton', 'Toronto') 
+  AND weight > 80;
+```
+
