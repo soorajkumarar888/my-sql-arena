@@ -441,4 +441,12 @@ FROM patients
 WHERE city IN ('Hamilton', 'Toronto') 
   AND weight > 80;
 ```
-
+### 36. Find all unique diagnoses in the admissions table that do not contain the word 'Cancer' or 'Flu'.
+* **Concepts Covered:** Value Deduplication (`DISTINCT`), Wildcard Substring Pattern Matching (`NOT LIKE`), Compound Boolean Negation (`AND` vs `OR` traps).
+When excluding multiple patterns, conditions must be chained using an `AND` operator. Using an `OR` operator accidentally causes every row to pass the filter, as a single diagnosis text string can never contain both words simultaneously.
+```sql
+SELECT DISTINCT diagnosis 
+FROM admissions 
+WHERE diagnosis NOT LIKE '%Cancer%' 
+  AND diagnosis NOT LIKE '%Flu%';
+```
