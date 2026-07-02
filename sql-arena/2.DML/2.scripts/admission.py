@@ -25,5 +25,3 @@ with open('admissions-dml.sql', mode='w', encoding='utf-8') as outfile:
 
 
 
-#4512;"2018-10-02";"2018-10-02";"Fibromyalgia";10    
-#patient_id, admission_date, discharge_date, diagnosis, attending_doctor_id
