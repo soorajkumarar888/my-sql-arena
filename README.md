@@ -6,9 +6,9 @@ The primary goal of this modular structure is to cleanly isolate each stage of t
 
 ---
 
-##  The Core Purpose: Your 1,000+ Row SQL Playground!
+## 🎯 The Core Purpose: Your 1,000+ Row SQL Playground!
 
-The ultimate mission of this project is to provide a **production-scale relational playground** for students, data analysts, and developers who want to learn and master SQL using realistic data volumes. 
+The ultimate mission of this project is to bridge the gap between tiny, textbook-style SQL examples and the messy reality of production data. 
 
 Many tutorials use tiny tables with only 4 or 5 rows, which makes practicing queries feel unrealistic. This project changes that:
 * **Real-World Volume:** By utilizing the processed data payloads, you will populate your local database with **thousands of rows** of realistic clinical records, admissions logs, and patient metrics.
@@ -21,6 +21,7 @@ Many tutorials use tiny tables with only 4 or 5 rows, which makes practicing que
 
 ### 🛠️ Target Environment: MySQL Enterprise / Workbench
 To preserve complete transactional integrity and allow for strict deployment auditing, this project utilizes an enterprise-grade **Staged Migration Workflow**. 
+
 * **Decoupled Deployment:** The database schema (`DDL`) and data insertion layers (`DML`) are completely decoupled from the execution runtime. This architectural choice prevents unchecked runtime database connections and allows database administrators (DBAs) to audit, review, and optimize the raw SQL transactional blocks before execution.
 * **Execution Control:** Compiled data payloads are natively imported and deployed directly within **MySQL Workbench** or any standard RDBMS CLI client, ensuring explicit transaction controls (`COMMIT/ROLLBACK`) and precise performance monitoring during the data intake phase.
 
