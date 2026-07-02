@@ -6,7 +6,7 @@ The primary goal of this modular structure is to cleanly isolate each stage of t
 
 ---
 
-## 🎯 The Core Purpose: Your 1,000+ Row SQL Playground!
+##  The Core Purpose: Your 1,000+ Row SQL Playground!
 
 The ultimate mission of this project is to provide a **production-scale relational playground** for students, data analysts, and developers who want to learn and master SQL using realistic data volumes. 
 
