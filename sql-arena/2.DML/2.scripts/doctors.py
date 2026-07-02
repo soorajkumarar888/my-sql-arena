@@ -23,4 +23,4 @@ if master_list:
 with open ('doctors-dml.sql', mode='w', encoding='utf-8') as outfile:
   for lines in master_list:
     outfile.write(lines+'\n')
-print()
+
