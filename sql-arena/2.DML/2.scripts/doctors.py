@@ -17,7 +17,7 @@ with open('doctors.csv') as file:
     final_row=f"({doctor_id}, '{first_name_clean}', '{last_name_clean}', '{specialty_clean}'),"
     master_list.append(final_row)
 if master_list:
-    master_list.insert(0,"INSERT INTO doctors (doctor_id, first_name, last_name, speciality) VALUES")
+    master_list.insert(0,"INSERT INTO doctors (doctor_id, first_name, last_name, specialty) VALUES")
     master_list[-1] = master_list[-1].replace("),",");")
 
 with open ('doctors-dml.sql', mode='w', encoding='utf-8') as outfile:
