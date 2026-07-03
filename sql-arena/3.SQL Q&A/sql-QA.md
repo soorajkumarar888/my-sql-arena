@@ -450,3 +450,49 @@ FROM admissions
 WHERE diagnosis NOT LIKE '%Cancer%' 
   AND diagnosis NOT LIKE '%Flu%';
 ```
+### 37. Show the patient_id and diagnosis of all admissions that happened on a weekend (Saturday or Sunday).
+* **Concepts Covered:** Date and Time Functions (`DAYNAME`), Set Membership Filtering (`IN`), Compound Boolean Evaluation (`OR`).
+
+#### Method 1: Shorthand Set Membership (Optimized & Highly Scannable)
+Using the `DAYNAME()` function combined with the `IN` operator allows for a clean, readable check against a collection of string targets.
+```sql
+SELECT 
+    patient_id, 
+    diagnosis 
+FROM admissions 
+WHERE DAYNAME(admission_date) IN ('Saturday', 'Sunday');
+```
+#### Method 2: Explicit Logical OR (Standard Breakdown)
+```sql
+SELECT 
+    patient_id, 
+    diagnosis 
+FROM admissions 
+WHERE DAYNAME(admission_date) = 'Saturday' 
+   OR DAYNAME(admission_date) = 'Sunday';
+```
+### 38. Find all doctors whose specialties contain the word 'cardio' or 'neuro', but their first name does not start with 'J'.
+* **Concepts Covered:** Substring Search (`LIKE`), Negated Wildcards (`NOT LIKE`), String Extraction (`LEFT`), Boolean Precedence Parentheses.
+
+#### Method 1: Wildcard Substring Filtering (Standard & Recommended)
+Using `%` wildcards isolates the roots 'cardio' and 'neuro' anywhere inside the specialty field. Parentheses group the `OR` conditions so that the first name negation `NOT LIKE 'J%'` applies strictly to both specialties.
+```sql
+SELECT 
+    first_name, 
+    last_name, 
+    specialty
+FROM doctors
+WHERE (specialty LIKE '%cardio%' OR specialty LIKE '%neuro%')
+  AND first_name NOT LIKE 'J%';
+```
+#### Method 2: Positional String Functions (Alternative Strategy)
+This method uses the LEFT() function to pull the very first character from the left side of the name string and explicitly verifies that it does not equal the character 'J'.
+```sql
+SELECT 
+    first_name, 
+    last_name, 
+    specialty
+FROM doctors
+WHERE (specialty LIKE '%cardio%' OR specialty LIKE '%neuro%')
+  AND LEFT(first_name, 1) != 'J';
+```
