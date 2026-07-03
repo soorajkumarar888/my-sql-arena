@@ -13,7 +13,7 @@ CREATE TABLE doctors (
     doctor_id INTEGER,
     first_name TEXT,
     last_name TEXT,
-    speciality TEXT,
+    specialty TEXT,
     PRIMARY KEY (doctor_id)
 );
 
