@@ -496,3 +496,25 @@ FROM doctors
 WHERE (specialty LIKE '%cardio%' OR specialty LIKE '%neuro%')
   AND LEFT(first_name, 1) != 'J';
 ```
+### 39. Show first name and last name of patients whose last name has 'o' as the second character and 'e' as the last character.
+* **Concepts Covered:** Positional Wildcard Matching (`LIKE`), Character Extraction (`SUBSTRING`), Suffix Verification (`RIGHT` / Negative Offsets).
+
+#### Method 1: Optimized Wildcard Blueprint (Highly Recommended)
+Using the underscore (`_`) wildcard targets the exact second position, while the percent (`%`) wildcard handles variable middle lengths, forcing an explicit 'e' termination. This method keeps the query index-friendly.
+```sql
+SELECT 
+    first_name, 
+    last_name 
+FROM patients 
+WHERE last_name LIKE '_o%e';
+```
+#### Method 2: Precise Positional Substring Extractions
+This approach uses a forward SUBSTRING anchor to isolate the second character, paired with a negative index position (-1) to count dynamically backward from the end of the text block.
+```sql
+SELECT 
+    first_name, 
+    last_name 
+FROM patients 
+WHERE SUBSTRING(last_name, 2, 1) = 'o' 
+  AND SUBSTRING(last_name, -1, 1) = 'e';
+```
