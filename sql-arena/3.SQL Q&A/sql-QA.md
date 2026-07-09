@@ -564,4 +564,10 @@ FROM patients
 WHERE patient_id % 2 = 0 
   AND height > 175;
 ```
-
+#### Method 2: Explicit MOD Function (Standard ANSI-SQL Syntax)
+```sql
+SELECT * 
+FROM patients 
+WHERE MOD(patient_id, 2) = 0 
+  AND height > 175;
+```
