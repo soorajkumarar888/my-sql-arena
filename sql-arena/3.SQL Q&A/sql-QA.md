@@ -509,7 +509,7 @@ FROM patients
 WHERE last_name LIKE '_o%e';
 ```
 #### Method 2: Precise Positional Substring Extractions
-This approach uses a forward SUBSTRING anchor to isolate the second character, paired with a negative index position (-1) to count dynamically backward from the end of the text block.
+This approach uses a forward SUBSTRING anchor to isolate the second character, paired with a negative index position (`-1`) to count dynamically backward from the end of the text block.
 ```sql
 SELECT 
     first_name, 
@@ -517,4 +517,39 @@ SELECT
 FROM patients 
 WHERE SUBSTRING(last_name, 2, 1) = 'o' 
   AND SUBSTRING(last_name, -1, 1) = 'e';
+```
+### 40. Display all patient details for those who do not have any registered allergies and were born after December 31, 1999.
+* **Concepts Covered:** Missing Data Handling (`IS NULL` vs Empty String `''`), Date Component Comparison (`YEAR`), SARGable Literal Date Filtering.
+
+#### Method 1: Component Extraction & Dual Null Handling
+This approach explicitly catches records where allergies are truly unassigned (`NULL`) or stored as a blank text block (`''`), combining it with a clean extraction of the calendar year.
+```sql
+SELECT * 
+FROM patients 
+WHERE (allergies IS NULL OR allergies = '') 
+  AND YEAR(birth_date) > 1999;
+```
+### 41. Show all unique cities where patients live, excluding any cities that start with vowels (A, E, I, O, U).
+* **Concepts Covered:** String Extraction (`LEFT`/`SUBSTRING`), Set Exclusion (`NOT IN`), Logical Conjunction (`AND` vs `OR` traps), Regular Expressions (`REGEXP`).
+
+#### Method 1: Left-Boundary Set Exclusion (Clean & Practical)
+Extracts the first character from the left side of the text string and validates that it does not belong to the set of uppercase vowels.
+```sql
+SELECT DISTINCT city 
+FROM patients 
+WHERE LEFT(city, 1) NOT IN ('A', 'E', 'I', 'O', 'U');
+```
+#### Method 2: SARGable Multiline Substring Filtering
+Achieves identical results to Method 1 by utilizando explicit positional scanning parameters.
+```sql
+SELECT DISTINCT city 
+FROM patients 
+WHERE SUBSTRING(city, 1, 1) NOT IN ('A', 'E', 'I', 'O', 'U');
+```
+#### Method 3: Regular Expression Anchor Matching (Highly Optimized)
+Uses regular expression syntax to evaluate the starting boundary character. The outer ^ anchors the search to the start of the string, while [`^AEIOU`] ensures the first character is completely barred from matching any vowel.
+```sql
+SELECT DISTINCT city 
+FROM patients 
+WHERE city REGEXP '^[^AEIOU]';
 ```
