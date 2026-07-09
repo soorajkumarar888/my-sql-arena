@@ -553,3 +553,15 @@ SELECT DISTINCT city
 FROM patients 
 WHERE city REGEXP '^[^AEIOU]';
 ```
+### 42. Find all patients whose patient_id is an even number and whose height is greater than 175cm.
+* **Concepts Covered:** Arithmetic Operators (`%`), Modulo Evaluation (`MOD`), Compound Boolean Filtering (`AND`).
+
+#### Method 1: Modulo Remainder Operator (Shorthand Syntax)
+Evaluates whether the `patient_id` is an even value by confirming that dividing the record ID by 2 yields a remainder of exactly 0.
+```sql
+SELECT * 
+FROM patients 
+WHERE patient_id % 2 = 0 
+  AND height > 175;
+```
+
