@@ -571,3 +571,13 @@ FROM patients
 WHERE MOD(patient_id, 2) = 0 
   AND height > 175;
 ```
+### 43. Show all details of admissions where the patient stayed in the hospital for exactly 7 days or more.
+* **Concepts Covered:** Date Arithmetic (`DATEDIFF`), Interval Computations, Relational Comparison Filters.
+
+#### Method 1: Date Difference Evaluation (MySQL / Standard)
+Using the built-in `DATEDIFF()` function safely computes the absolute number of calendar days between boundaries, ignoring mathematical month-crossing anomalies. In MySQL, the syntax subtracts the second date argument from the first.
+```sql
+SELECT * 
+FROM admissions 
+WHERE DATEDIFF(discharge_date, admission_date) >= 7;
+```
