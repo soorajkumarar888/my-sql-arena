@@ -581,3 +581,96 @@ SELECT *
 FROM admissions 
 WHERE DATEDIFF(discharge_date, admission_date) >= 7;
 ```
+### 44. Find patients whose first names are exactly 5 characters long and end with the letter 'a'.
+* **Concepts Covered:** String Length Verification (`LENGTH`), Boundary Char Matching (`RIGHT`/`SUBSTRING`), SARGable Fixed-Length Wildcards (`LIKE`).
+
+#### Method 1: SARGable Fixed-Length Wildcard Match (Highly Optimized)
+Uses four positional underscore (`_`) wildcards followed by a terminal character anchor. This forces an exact length constraint of five characters without calling runtime string functions, keeping the query highly efficient.
+```sql
+SELECT * 
+FROM patients 
+WHERE first_name LIKE '____a';
+```
+#### Method 2: String Length with Terminal Suffix Matching
+Combines the LENGTH() calculation with standard trailing pattern matching to verify string dimensions and target boundaries cleanly.
+```sql
+SELECT * 
+FROM patients 
+WHERE LENGTH(first_name) = 5 
+  AND first_name LIKE '%a';
+```
+#### Method 3: Combined Length and Extraction Functions
+Pairs structural length auditing with target boundary extraction via the RIGHT() function to validate string requirements.
+```sql
+SELECT * 
+FROM patients 
+WHERE LENGTH(first_name) = 5 
+  AND RIGHT(first_name, 1) = 'a';
+```
+#### Method 4: Pure Positional Boundary Isolation (Advanced Constraint)
+Forces both the ending character validation and the strict 5-character length boundary by asserting that the fifth index contains the target letter 'a', while verifying that the sixth index evaluates to an empty string wrapper.
+```sql
+SELECT * 
+FROM patients 
+WHERE SUBSTRING(first_name, 5, 1) = 'a' 
+  AND SUBSTRING(first_name, 6, 1) = '';
+```
+### 45. Display admissions where the diagnosis is exactly 3 words long.
+* **Concepts Covered:** String Manipulation, Space Character Extraction (`REPLACE`), Character Metric Math, Multi-Boundary Wildcard Filtering (`LIKE`/`NOT LIKE`).
+
+#### Method 1: Mathematical Space Character Counting (Highly Recommended)
+Calculates the word count by isolating the volume of spaces within the text block. Because a phrase with exactly 3 words must contain exactly 2 spaces, subtracting the space-less length from the original length yields the precise filter condition.
+```sql
+SELECT * 
+FROM admissions 
+WHERE LENGTH(diagnosis) - LENGTH(REPLACE(diagnosis, ' ', '')) = 2;
+```
+### 46. Show patients who were born in any month except June, July, or August.
+* **Concepts Covered:** Date Component Extraction (`MONTHNAME`), Literal Text Set Exclusion (`NOT IN`), Case-Insensitive String Verification.
+
+#### Method 1: Literal String Month Exclusion (Clean & Readable)
+Utilizes the `MONTHNAME()` function to extract the full text label of the birth month, evaluating it against a strict set exclusion array to filter out the summer peak.
+```sql
+SELECT * 
+FROM patients 
+WHERE MONTHNAME(birth_date) NOT IN ('June', 'July', 'August');
+```
+### 47. Show all details of doctors whose last name is alphabetically sorted after 'Miller'.
+* **Concepts Covered:** Lexicographical Text Evaluation (`>`), String ASCII Comparison, Ordering Datasets (`ORDER BY`).
+
+#### Method 1: Lexicographical String Comparison (Highly Recommended)
+Applies a standard greater-than (`>`) comparison operator directly to a text string. SQL naturally evaluates strings character-by-character based on alphabetical sorting rules, capturing all names ranked after the specified string literal.
+```sql
+SELECT * 
+FROM doctors 
+WHERE last_name > 'Miller' 
+ORDER BY last_name;
+```
+### 48. Pull all unique patient IDs from admissions who were admitted during the first 10 days of any month.
+* **Concepts Covered:** Value Duplication Prevention (`DISTINCT`), Date Part Extraction (`DAY` / `EXTRACT`), Comparison Operators.
+
+#### Method 1: Day Component Integer Filtering (Highly Recommended)
+Uses the native `DAY()` function to isolate the calendar day component of the timestamp as an integer, applying a simple relational boundary filter to capture dates between the 1st and the 10th.
+```sql
+SELECT DISTINCT patient_id 
+FROM admissions 
+WHERE DAY(admission_date) <= 10;
+```
+### 49. Show all columns for patients where the city column has an actual text value, but it contains a space (e.g., 'New York').
+* **Concepts Covered:** String Pattern Matching (`LIKE`), Wildcard Anchoring (`_`), Data Cleaning Protection (`TRIM`), Blank/Space Anomaly Handling.
+
+#### Method 1: Protected Space Wildcard Matching (Highly Recommended)
+Uses a standard space wildcard filter combined with a data-cleaning `TRIM()` condition. This guarantees that rows matching the space requirement represent actual text names rather than empty string wrappers or blank entries.
+```sql
+SELECT * 
+FROM patients 
+WHERE city LIKE '% %' 
+  AND TRIM(city) != '';
+```
+#### Method 2:Pure Wildcard Text Anchoring
+Employs positional underscore (_) wildcards to force the engine to verify that at least one character exists on both the leading and trailing edges of the space, effectively blocking pure blank fields without calling string functions.
+```sql
+SELECT * 
+FROM patients 
+WHERE city LIKE '_% %_';
+```
