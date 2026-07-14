@@ -674,3 +674,33 @@ SELECT *
 FROM patients 
 WHERE city LIKE '_% %_';
 ```
+### 50. Show first name, last name, and the full province name for all patients who live in the province of 'Ontario'.
+* **Concepts Covered:** Table Joins (`JOIN`), Structural Key Mapping (`ON` vs `USING`), Table Aliasing, Column Ambiguity Prevention.
+
+#### Method 1: Explicit Equi-Join via Key Mapping (Gold Standard)
+Connects the operational transactional table to the master entity reference table via an explicit key mapping assertion. Applying descriptive structural aliases prevents column name collisions.
+```sql
+SELECT 
+    p.first_name, 
+    p.last_name, 
+    pr.province_name 
+FROM patients p 
+JOIN province_names pr 
+  ON p.province_id = pr.province_id 
+WHERE pr.province_name = 'Ontario';
+```
+### 51. Display patient_id, admission_date, and the attending doctor's first and last name concatenated together for every admission.
+* **Concepts Covered:** Relational Joins (`JOIN`), Text Concatenation (`CONCAT` vs `CONCAT_WS`), Column Aliasing.
+
+#### Method 1: Standard Multi-Argument Concatenation (Highly Readable)
+Executes a traditional table join between transactional admissions and doctor master files, utilizing the standard `CONCAT()` function to manually sandwich a blank spacing string between the target name fields.
+```sql
+SELECT 
+    a.patient_id, 
+    a.admission_date, 
+    CONCAT(d.first_name, ' ', d.last_name) AS full_name 
+FROM admissions a 
+JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id;
+```
+
