@@ -703,4 +703,35 @@ FROM admissions a
 JOIN doctors d 
   ON a.attending_doctor_id = d.doctor_id;
 ```
+### 52. Show the first name, last name, and specialty of all doctors who have never attended an admission (Look for unassigned doctors).
+* **Concepts Covered:** Exclusionary Joins (`LEFT JOIN`), Filtering Missing Relationships (`IS NULL`), Understanding Cartesian Joins vs. Inequality Operators (`!=`).
+#### Method 1: Left Join with Null Filtration (Optimal & Standard)
+Dont use != or <> here because when joining two tables, the database conceptually builds a Cartesian Product ($A \times B$). Every single row in the left table is temporarily paired with every single row in the right table.
+Executes a left outer join preserving all doctor records, then filters out successfully matched pairings to isolate only the inactive doctors where the corresponding transaction record resolves to `NULL`.
+```sql
+SELECT 
+  d.first_name, 
+  d.last_name, 
+  d.speciality 
+FROM doctors d 
+LEFT JOIN admissions a 
+  ON d.doctor_id = a.attending_doctor_id
+WHERE a.attending_doctor_id IS NULL;
+```
+### 53. Find the first name and last name of patients who were attended by a doctor specializing in 'Cardiology'.
+* **Concepts Covered:** Chained Relational Joins (`INNER JOIN`), Associative Schema Traversal (Junction Bridging), Target Predicate Filtering (`WHERE`).
+
+#### Method 1: Chained Horizontal Joins (Optimal & High-Performance)
+Executes sequential inner joins to bridge the transactional distance between `patients` and `doctors` using `admissions` as an associative junction table, then applies a precise text filter on the doctor's specialty.
+```sql
+SELECT 
+  p.first_name, 
+  p.last_name 
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id 
+JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id 
+WHERE d.speciality = 'Cardiology';
+```
 
