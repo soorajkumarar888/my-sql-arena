@@ -735,3 +735,157 @@ JOIN doctors d
 WHERE d.speciality = 'Cardiology';
 ```
 
+### 54. Show the patient_id, diagnosis, and full province name for patients whose diagnosis is 'Pneumonia'.
+* **Concepts Covered:** Multi-Table Star Schema Joins (`INNER JOIN`), Relational Mapping, Predicate Filtering (`WHERE`).
+
+#### Method 1: Central Normalized Joins (Optimal & High-Performance)
+Executes dual horizontal inner joins using the patient master file as the structural hub to pull transactional records from the admissions log and geographic details from the province master file simultaneously.
+```sql
+SELECT 
+  p.patient_id, 
+  a.diagnosis, 
+  pr.province_name 
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id 
+JOIN province_names pr 
+  ON p.province_id = pr.province_id 
+WHERE a.diagnosis = 'Pneumonia';
+```
+### 55. Display every doctor's name along with the total number of unique patients they have treated.
+* **Concepts Covered:** Aggregation Functions (`COUNT`), Deduplication Metrics (`DISTINCT`), Full-Set Preservation (`LEFT JOIN`), Multi-Column Grouping (`GROUP BY`).
+
+#### Method 1: Left Join with Multi-Column Aggregation (Optimal & Complete)
+Executes a left outer join to preserve the entire doctor registry, groups the records by individual doctor names and identification keys, and counts unique patient IDs to accurately report metrics for both active and inactive doctors.
+```sql
+SELECT 
+  d.first_name, 
+  d.last_name, 
+  COUNT(DISTINCT a.patient_id) AS total_patients 
+FROM doctors d 
+LEFT JOIN admissions a 
+  ON d.doctor_id = a.attending_doctor_id
+GROUP BY 
+  d.doctor_id, 
+  d.first_name, 
+  d.last_name;
+```
+### 56. Show a list of all patients (first and last name) who have been admitted to the hospital more than once under the exact same doctor.
+* **Concepts Covered:** Relational Joins (`INNER JOIN`), Multi-Column Grouping (`GROUP BY`), Aggregate Filtering (`HAVING`), Relationship Frequency Metrics.
+
+#### Method 1: Multi-Column Grouping with Aggregate Filtration (Optimal & Standard)
+Joins the patient registry with the transactional admissions table, groups the dataset by unique patient and doctor pairings, and evaluates the group frequency using `HAVING COUNT(*) > 1` to isolate repeat admissions under the same physician.
+```sql
+SELECT 
+  p.first_name, 
+  p.last_name 
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id 
+GROUP BY 
+  p.patient_id, 
+  p.first_name, 
+  p.last_name, 
+  a.attending_doctor_id 
+HAVING COUNT(*) > 1;
+```
+### 57. Find the first name and last name of patients who live in a province where the province name ends with the letter 'a'.
+* **Concepts Covered:** Wildcard Pattern Matching (`LIKE`), String Extraction Functions (`RIGHT`, `SUBSTRING`), Relational Joins (`INNER JOIN`).
+
+#### Method 1: Trailing Wildcard Search (Optimal & Standard)
+Executes an inner join to pair patients with their province data, applying the standard `%a` wildcard filter to locate province names ending in 'a'.
+```sql
+SELECT 
+  p.first_name, 
+  p.last_name 
+FROM patients p 
+JOIN province_names pr 
+  ON p.province_id = pr.province_id 
+WHERE pr.province_name LIKE '%a';
+```
+#### Method 2: String Slicing with Negative Offset (SUBSTRING)
+Uses a negative starting index (-1) to begin reading from the end of the string, extracting a single character to verify if it equals 'a'.
+note: you can also use RIGHT.
+```sql
+SELECT 
+  p.first_name, 
+  p.last_name 
+FROM patients p 
+JOIN province_names pr 
+  ON p.province_id = pr.province_id 
+WHERE SUBSTRING(pr.province_name, -1, 1) = 'a';
+```
+### 58. Find pairs of patients who live in the same city and share the exact same last name. Display their names and the city.
+* **Concepts Covered:** Relational Self-Joins (`JOIN` on same table), Pair Deduplication Operators (`<` Inequality), Column Aliasing (`AS`).
+
+#### Method 1: Relational Self-Join with Strict Asymmetric Key Comparison (Optimal & Standard)
+Joins the `patients` table to itself (`p` and `p0`), matching records on identical city and last name fields. Applies a strict inequality condition (`p.patient_id < p0.patient_id`) to ensure each unique patient pair is represented exactly once without self-matching or duplicate mirror pairs.
+
+```sql
+SELECT 
+  p.first_name AS patient_1_first_name,
+  p0.first_name AS patient_2_first_name,
+  p.last_name,
+  p.city
+FROM patients p 
+JOIN patients p0 
+  ON p.city = p0.city 
+ AND p.last_name = p0.last_name 
+ AND p.patient_id < p0.patient_id;
+```
+### 59. Show all admissions records, including the patient's first name, last name, and the attending doctor's specialty.
+* **Concepts Covered:** Multi-Table Relational Joins (`INNER JOIN`), Foreign Key Navigation, Record Projection.
+
+#### Method 1: Multi-Table Inner Join with Explicit Field Projection (Optimal & Standard)
+Joins the central `admissions` transactional table with both the `patients` and `doctors` dimension tables using their respective primary/foreign key relationships.
+```sql
+SELECT 
+  a.admission_id,
+  a.patient_id,
+  a.admission_date,
+  a.discharge_date,
+  a.diagnosis,
+  a.attending_doctor_id,
+  p.first_name AS patient_first_name,
+  p.last_name AS patient_last_name,
+  d.specialty AS doctor_specialty
+FROM admissions a
+JOIN patients p 
+  ON a.patient_id = p.patient_id
+JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id;
+```
+#### Method 2: Wildcard Record Projection (a.*)
+Retrieves all raw columns directly from the admissions table while joining adjacent tables to project patient names and doctor specialties.
+```sql
+SELECT 
+  p.first_name, 
+  p.last_name, 
+  d.specialty, 
+  a.* 
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id
+JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id;
+```
+### 60. Show patient_id, full name, and the total number of days they spent in the hospital across all admissions combined.
+* **Concepts Covered:** Date Arithmetic (`DATEDIFF`), Aggregate Summation (`SUM`), String Concatenation (`CONCAT_WS`), Relational Grouping (`GROUP BY`).
+
+#### Method 1: DATEDIFF Aggregation with CONCAT_WS (Optimal & Standard)
+Joins patient records to admission logs, calculates the duration of each individual stay using `DATEDIFF()`, and aggregates total duration per patient using `SUM()`.
+
+```sql
+SELECT 
+  p.patient_id,
+  CONCAT_WS(' ', p.first_name, p.last_name) AS full_name,
+  SUM(DATEDIFF(a.discharge_date, a.admission_date)) AS total_days
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id
+GROUP BY 
+  p.patient_id,
+  p.first_name,
+  p.last_name;
+```
+
