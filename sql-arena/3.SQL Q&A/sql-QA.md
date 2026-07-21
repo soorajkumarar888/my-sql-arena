@@ -888,4 +888,109 @@ GROUP BY
   p.first_name,
   p.last_name;
 ```
+### 61. List all provinces along with the total count of doctors who have treated a patient from that province.
+* **Concepts Covered:** Multi-Table Relational Joins (`INNER JOIN`), Geographic Aggregation (`GROUP BY`), Distinct Cardinality Aggregation (`COUNT(DISTINCT)`).
+
+#### Method 1: Relational Join with Distinct Doctor Aggregation (Optimal & Standard)
+Joins patient records with admission logs and geographic master data (`province_names`). Uses `COUNT(DISTINCT)` to deduplicate attending doctor IDs so each unique doctor is counted once per province group.
+
+```sql
+SELECT 
+  pr.province_name,
+  COUNT(DISTINCT a.attending_doctor_id) AS doctor_count
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id
+JOIN province_names pr 
+  ON p.province_id = pr.province_id 
+GROUP BY 
+  pr.province_name;
+```
+### 62. Find the diagnosis that has been assigned to patients from the highest number of different provinces.
+* **Concepts Covered:** Multi-Table Joins (`INNER JOIN`), Distinct Aggregation (`COUNT(DISTINCT)`), Result Ordering (`ORDER BY`), Top-N Filtering (`LIMIT`).
+
+#### Method 1: Distinct Province Counting with Limit (Optimal & Standard)
+Groups admission records by diagnosis and calculates the cardinality of unique geographic provinces (`COUNT(DISTINCT p.province_id)`). Sorts the resulting counts in descending order and limits output to the top record.
+
+```sql
+SELECT 
+  a.diagnosis,
+  COUNT(DISTINCT p.province_id) AS province_count
+FROM admissions a
+JOIN patients p 
+  ON a.patient_id = p.patient_id
+GROUP BY 
+  a.diagnosis
+ORDER BY 
+  province_count DESC
+LIMIT 1;
+```
+### 63. Show patient_id, first_name, and admission_date for patients whose attending doctor has the first name 'Michael'.
+* **Concepts Covered:** Multi-Table Relational Joins (`INNER JOIN`), Foreign Key Navigation, Filter Conditions (`WHERE`).
+
+#### Method 1: Multi-Table Relational Join (Optimal & Standard)
+Joins the `patients`, `admissions`, and `doctors` tables to map patient admissions back to the attending doctor, filtering specifically for doctors named 'Michael'.
+
+```sql
+SELECT 
+  p.patient_id, 
+  p.first_name, 
+  a.admission_date 
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id 
+JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id 
+WHERE d.first_name = 'Michael';
+```
+### 64. Display every patient's first name, last name, and their doctor's specialty. If they haven't been admitted yet, show 'No Admission'.
+* **Concepts Covered:** Outer Relational Joins (`LEFT JOIN`), Conditional Null Value Substitution (`CASE WHEN` / `COALESCE`).
+
+#### Method 1: LEFT JOIN with CASE WHEN Conditional Formatting (Optimal & Standard)
+Performs an outer join starting from the master `patients` directory down through `admissions` and `doctors`. Employs a `CASE WHEN` block to check for missing relational records and substitute `'No Admission'` for unassigned doctor specialties.
+
+```sql
+SELECT 
+  p.first_name,
+  p.last_name,
+  CASE 
+    WHEN d.specialty IS NULL THEN 'No Admission'
+    ELSE d.specialty
+  END AS doctor_specialty
+FROM patients p
+LEFT JOIN admissions a 
+  ON p.patient_id = a.patient_id
+LEFT JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id;
+```
+#### Method 2: Concise Substitution with COALESCE
+Uses the standard ANSI COALESCE() function to fall back to the default string 'No Admission' whenever d.specialty evaluates to NULL.
+```sql
+SELECT 
+  p.first_name,
+  p.last_name,
+  COALESCE(d.specialty, 'No Admission') AS doctor_specialty
+FROM patients p
+LEFT JOIN admissions a 
+  ON p.patient_id = a.patient_id
+LEFT JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id;
+```
+### 65. Find all patients who were admitted on the exact same day that another patient was discharged.
+* **Concepts Covered:** Self-Joins (`INNER JOIN` on same table), Relational Inequality (`<>`), Cardinality Deduplication (`DISTINCT`).
+
+#### Method 1: Self-Join on Date Alignment (Optimal & Standard)
+Performs a self-join on the `admissions` table matching `admission_date` from instance `a1` with `discharge_date` from instance `a2`, enforcing `a1.patient_id <> a2.patient_id` to isolate distinct patients.
+
+```sql
+SELECT DISTINCT 
+  p.first_name,
+  p.last_name
+FROM patients p
+JOIN admissions a1 
+  ON p.patient_id = a1.patient_id
+JOIN admissions a2 
+  ON a1.admission_date = a2.discharge_date 
+  AND a1.patient_id <> a2.patient_id;
+```
 
