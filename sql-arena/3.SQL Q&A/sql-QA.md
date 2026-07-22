@@ -993,4 +993,77 @@ JOIN admissions a2
   ON a1.admission_date = a2.discharge_date 
   AND a1.patient_id <> a2.patient_id;
 ```
+### 66. Show the name of the province that has the highest number of recorded patient admissions.
+* **Concepts Covered:** Multi-Table Relational Joins (`INNER JOIN`), Relational Aggregation (`GROUP BY`), Sorting (`ORDER BY`), Top-N Filtering (`LIMIT`).
+
+#### Method 1: Relational Join with Count Ordering & Limit (Optimal & Standard)
+Joins `patients`, `admissions`, and `province_names` to calculate total recorded admissions per province group. Sorts the counts in descending order and uses `LIMIT 1` to isolate the top province.
+
+```sql
+SELECT 
+  pr.province_name 
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id 
+JOIN province_names pr 
+  ON p.province_id = pr.province_id
+GROUP BY 
+  pr.province_name 
+ORDER BY 
+  COUNT(*) DESC 
+LIMIT 1;
+```
+### 67. Find all doctors who have treated patients with 'Asthma' and display the total number of asthma patients they treated.
+* **Concepts Covered:** Relational Joins (`INNER JOIN`), Row-Level Filtering (`WHERE`), Aggregation with Grouping (`GROUP BY`), Distinct Patient Counting (`COUNT(DISTINCT)`).
+
+#### Method 1: Pre-Aggregation Row Filtering with WHERE (Optimal & Standard)
+Filters admission logs specifically for 'Asthma' diagnoses in the `WHERE` clause prior to grouping, aggregating unique patient counts per attending doctor.
+
+```sql
+SELECT 
+  d.first_name,
+  d.last_name,
+  COUNT(DISTINCT a.patient_id) AS total_asthma_patients
+FROM doctors d
+JOIN admissions a 
+  ON d.doctor_id = a.attending_doctor_id
+WHERE 
+  a.diagnosis = 'Asthma'
+GROUP BY 
+  d.doctor_id,
+  d.first_name,
+  d.last_name;
+```
+### 68. Show the city and the average weight of patients in that city, but only display cities where the average weight is over 75kg.
+* **Concepts Covered:** Group-Level Aggregation (`GROUP BY`), Average Calculation (`AVG`), Aggregate Group Filtering (`HAVING`).
+
+#### Method 1: Group By with HAVING Aggregate Filter (Optimal & Standard)
+Groups patient records by city, calculates the average weight per group, and uses the `HAVING` clause to filter out cities where the average weight is 75kg or less.
+
+```sql
+SELECT 
+  city, 
+  AVG(weight) AS average_weight 
+FROM patients 
+GROUP BY 
+  city 
+HAVING 
+  AVG(weight) > 75;
+```
+### 69. Show the attending_doctor_id and the total number of admissions they handled, sorted from highest to lowest admissions.
+* **Concepts Covered:** Group-Level Aggregation (`GROUP BY`), Cardinality Deduplication (`COUNT(DISTINCT)`), Result Sorting (`ORDER BY`).
+
+#### Method 1: Distinct Patient Aggregation per Doctor (Optimal & Standard)
+Groups admission logs by `attending_doctor_id` to evaluate unique patient admissions handled per doctor, ordering the results from highest to lowest volume.
+
+```sql
+SELECT 
+  attending_doctor_id, 
+  COUNT(DISTINCT patient_id) AS count_of_admissions 
+FROM admissions
+GROUP BY 
+  attending_doctor_id 
+ORDER BY 
+  count_of_admissions DESC;
+```
 
