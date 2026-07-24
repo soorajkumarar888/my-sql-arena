@@ -1066,4 +1066,114 @@ GROUP BY
 ORDER BY 
   count_of_admissions DESC;
 ```
+### 70. For each specialty, find the average height of patients treated by doctors in that specialty.
+* **Concepts Covered:** Multi-Table Relational Joins (`INNER JOIN`), Aggregate Calculations (`AVG`), Numeric Formatting (`ROUND`), Relational Grouping (`GROUP BY`).
 
+#### Method 1: Relational Join with Rounded Average Aggregation (Optimal & Standard)
+Joins `patients`, `admissions`, and `doctors` to map patient measurements back to attending physician specialties. Groups results by `d.specialty` and calculates the rounded average patient height.
+
+```sql
+SELECT 
+  d.specialty, 
+  ROUND(AVG(p.height), 2) AS avg_height 
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id 
+JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id
+GROUP BY 
+  d.specialty;
+```
+### 71. Find the province IDs where the total number of patients living there is less than 50.
+* **Concepts Covered:** Group-Level Aggregation (`GROUP BY`), Cardinality Deduplication (`COUNT(DISTINCT)`), Aggregate Group Filtering (`HAVING`).
+
+#### Method 1: Group By with HAVING Aggregate Filter (Optimal & Standard)
+Groups patient records by `province_id`, calculates total patient count per group, and filters out provinces with 50 or more patients using the `HAVING` clause.
+
+```sql
+SELECT 
+  province_id 
+FROM patients 
+GROUP BY 
+  province_id 
+HAVING 
+  COUNT(patient_id) < 50;
+```
+### 72. For each unique diagnosis, display the diagnosis name and the minimum and maximum age of patients who received it.
+* **Concepts Covered:** Date Arithmetic (`TIMESTAMPDIFF` / `strftime`), Min/Max Aggregations (`MIN`, `MAX`), Relational Joins (`INNER JOIN`), Relational Grouping (`GROUP BY`).
+
+#### Method 1: SQLite Date Functionality (`strftime`)
+Extracts year components using `strftime('%Y')` to compute patient age differences, grouping by diagnosis to extract `MIN()` and `MAX()` extremes.
+
+```sql
+SELECT 
+  a.diagnosis,
+  MIN(strftime('%Y', 'now') - strftime('%Y', p.birth_date)) AS min_age,
+  MAX(strftime('%Y', 'now') - strftime('%Y', p.birth_date)) AS max_age
+FROM patients p
+JOIN admissions a 
+  ON p.patient_id = a.patient_id
+GROUP BY 
+  a.diagnosis;
+```
+#### Method 2: MySQL Standard Syntax (TIMESTAMPDIFF)
+Calculates precise year boundaries between birth_date and `CURDATE()` using` TIMESTAMPDIFF(YEAR, ...)`.
+```sql
+SELECT 
+  a.diagnosis,
+  MIN(TIMESTAMPDIFF(YEAR, p.birth_date, CURDATE())) AS min_age,
+  MAX(TIMESTAMPDIFF(YEAR, p.birth_date, CURDATE())) AS max_age
+FROM patients p
+JOIN admissions a 
+  ON p.patient_id = a.patient_id
+GROUP BY 
+  a.diagnosis;
+```
+### 73. Show the admission year and the total number of admissions that took place in that year.
+* **Concepts Covered:** Date Part Extraction (`YEAR` / `strftime`), Event Aggregation (`COUNT`), Relational Grouping (`GROUP BY`).
+
+#### Method 1: Standard SQL Date Function (`YEAR`)
+Uses the standard `YEAR()` scalar function to isolate the calendar year from `admission_date` and aggregate total admission events per year.
+
+```sql
+SELECT 
+  YEAR(admission_date) AS admission_year,
+  COUNT(*) AS total_admissions
+FROM admissions
+GROUP BY 
+  YEAR(admission_date);
+```
+Note: If using an SQLite environment (such as sql-practice.com), you can replace `YEAR(admission_date)` with `strftime('%Y', admission_date)`.
+
+### 74. Display the patient_id and the total number of admissions they had, but only for patients with more than 3 admissions.
+* **Concepts Covered:** Group-Level Aggregation (`GROUP BY`), Event Counting (`COUNT`), Aggregate Group Filtering (`HAVING`).
+
+#### Method 1: Group By with HAVING Aggregate Filter (Optimal & Standard)
+Groups admission logs by `patient_id`, counts total admissions per patient, and filters for patients with strictly more than 3 recorded admissions using `HAVING`.
+
+```sql
+SELECT 
+  patient_id, 
+  COUNT(patient_id) AS count_of_admissions 
+FROM admissions 
+GROUP BY 
+  patient_id 
+HAVING 
+  COUNT(patient_id) > 3;
+```
+### 75. Find the average duration of a hospital stay (Discharge date minus Admission date) grouped by the patient's gender.
+* **Concepts Covered:** Date Arithmetic (`DATEDIFF` / `julianday`), Aggregate Calculations (`AVG`), Relational Joins (`INNER JOIN`), Grouping (`GROUP BY`).
+
+#### Method 1: Standard MySQL Syntax (`DATEDIFF`)
+Calculates the length of stay per admission using `DATEDIFF()` and aggregates average duration per patient gender.
+
+```sql
+SELECT 
+  p.gender,
+  AVG(DATEDIFF(a.discharge_date, a.admission_date)) AS avg_duration 
+FROM admissions a 
+JOIN patients p 
+  ON p.patient_id = a.patient_id 
+GROUP BY 
+  p.gender;
+```
