@@ -1254,4 +1254,36 @@ GROUP BY
 ORDER BY 
   birth_year ASC;
 ```
+### 81. Show the province names that have an average patient weight between 65kg and 85kg.
+* **Concepts Covered:** Relational Joins (`INNER JOIN`), Grouping Aggregation (`GROUP BY`), Range Filtering on Aggregates (`HAVING` / `BETWEEN`).
 
+#### Method 1: Relational Join with HAVING Range Filter (Optimal & Standard)
+Joins patient demographics with province definitions, calculates the average patient weight per province, and filters the aggregated groups using `HAVING ... BETWEEN`.
+
+```sql
+SELECT 
+  pr.province_name 
+FROM patients p 
+JOIN province_names pr 
+  ON p.province_id = pr.province_id 
+GROUP BY 
+  pr.province_name 
+HAVING 
+  AVG(p.weight) BETWEEN 65 AND 85;
+```
+### 82. Count how many patients have a last name that starts with each letter of the alphabet. Group by the starting letter.
+* **Concepts Covered:** String Extraction (`LEFT` / `SUBSTR`), Group Aggregation (`GROUP BY`), Sorting (`ORDER BY`).
+
+#### Method 1: Using `LEFT()` Function (Optimal & Standard)
+Extracts the first character of `last_name` using `LEFT()`, groups records by that starting character, and calculates total patient counts.
+
+```sql
+SELECT 
+  LEFT(last_name, 1) AS alphabet, 
+  COUNT(patient_id) AS total_counts 
+FROM patients 
+GROUP BY 
+  LEFT(last_name, 1) 
+ORDER BY 
+  alphabet ASC;
+```
