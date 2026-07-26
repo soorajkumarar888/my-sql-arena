@@ -1177,3 +1177,81 @@ JOIN patients p
 GROUP BY 
   p.gender;
 ```
+### 76. Show the city, gender, and total count of patients grouped by city and then by gender.
+* **Concepts Covered:** Multi-Column Grouping (`GROUP BY`), Record Aggregation (`COUNT`).
+
+#### Method 1: Multi-Column Group By Aggregation (Optimal & Standard)
+Groups patient records by `city` first, then subgroups by `gender`, calculating the total patient count per combination.
+
+```sql
+SELECT 
+  city, 
+  gender, 
+  COUNT(patient_id) AS patient_count 
+FROM patients 
+GROUP BY 
+  city, 
+  gender;
+```
+### 77. Find the total weight of all male patients living in province_id 'ON'.
+* **Concepts Covered:** Conditional Row Filtering (`WHERE`), Group-Level Aggregation (`GROUP BY` / `HAVING`), Numeric Aggregation (`SUM`).
+
+#### Method 1: Pre-Filtered Aggregate Sum (Optimal & Standard)
+Filters raw patient records using `WHERE` before aggregating, minimizing total row processing.
+
+```sql
+SELECT 
+  SUM(weight) AS total_weight 
+FROM patients 
+WHERE gender = 'M' 
+  AND province_id = 'ON';
+```
+### 78. Display the doctor's specialty and the total amount of unique diagnoses they have issued, filtered for specialties with more than 5 unique diagnoses.
+* **Concepts Covered:** Multi-Table Relational Joins (`INNER JOIN`), Distinct Group Aggregation (`COUNT(DISTINCT)`), Aggregate Group Filtering (`HAVING`).
+
+#### Method 1: Relational Join with Distinct HAVING Filter (Optimal & Standard)
+Joins admissions with doctor profiles, aggregates distinct diagnosis strings per specialty, and filters out specialties with 5 or fewer unique diagnoses using `HAVING`.
+
+```sql
+SELECT 
+  d.specialty, 
+  COUNT(DISTINCT a.diagnosis) AS unique_diagnoses 
+FROM admissions a 
+JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id 
+GROUP BY 
+  d.specialty 
+HAVING 
+  COUNT(DISTINCT a.diagnosis) > 5;
+```
+### 79. Show the patient_id and the earliest (oldest) admission date they have on record.
+* **Concepts Covered:** Group Aggregation (`GROUP BY`), Minimum Value Extraction (`MIN`).
+
+#### Method 1: Group By with MIN Aggregate Function (Optimal & Standard)
+Groups admission records by `patient_id` and applies `MIN(admission_date)` to determine each patient's initial admission date.
+
+```sql
+SELECT 
+  patient_id, 
+  MIN(admission_date) AS earliest_admission_date 
+FROM admissions 
+GROUP BY 
+  patient_id;
+```
+### 80. Find the average height of patients grouped by their birth year, ordered by birth year ascending.
+* **Concepts Covered:** Date Part Extraction (`YEAR` / `strftime`), Numeric Aggregation (`AVG`), Relational Grouping (`GROUP BY`), Sorting (`ORDER BY`).
+
+#### Method 1: Standard SQL Date Function (`YEAR`)
+Extracts the year component from `birth_date`, calculates the average height per birth year group, and orders the output chronologically.
+
+```sql
+SELECT 
+  YEAR(birth_date) AS birth_year, 
+  AVG(height) AS avg_height 
+FROM patients 
+GROUP BY 
+  YEAR(birth_date) 
+ORDER BY 
+  birth_year ASC;
+```
+
