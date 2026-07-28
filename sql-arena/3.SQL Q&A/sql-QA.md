@@ -1287,3 +1287,36 @@ GROUP BY
 ORDER BY 
   alphabet ASC;
 ```
+### 83. Find the total number of admissions handled by each doctor specialty.
+* **Concepts Covered:** Multi-Table Relational Joins (`INNER JOIN`), Group-Level Aggregation (`GROUP BY`), Count Aggregation (`COUNT`).
+
+#### Method 1: Relational Join with Group Aggregation (Optimal & Standard)
+Joins admission records to doctor profiles using `attending_doctor_id`, groups by `specialty`, and counts total admission records per specialty category.
+
+```sql
+SELECT 
+  dr.specialty, 
+  COUNT(a.patient_id) AS total_admissions 
+FROM admissions a 
+JOIN doctors dr 
+  ON a.attending_doctor_id = dr.doctor_id 
+GROUP BY 
+  dr.specialty;
+```
+### 84. Show the month number (1–12) and the total number of patients born in that specific month.
+* **Concepts Covered:** Date Part Extraction (`MONTH` / `strftime`), Record Aggregation (`COUNT`), Relational Grouping (`GROUP BY`), Sorting (`ORDER BY`).
+
+#### Method 1: Standard SQL Date Function (`MONTH`)
+Extracts the month integer (1 through 12) from `birth_date` using `MONTH()`, groups patients by month, and orders the output chronologically.
+
+```sql
+SELECT 
+  MONTH(birth_date) AS month_number, 
+  COUNT(patient_id) AS total_patients 
+FROM patients 
+GROUP BY 
+  MONTH(birth_date) 
+ORDER BY 
+  month_number ASC;
+```
+
