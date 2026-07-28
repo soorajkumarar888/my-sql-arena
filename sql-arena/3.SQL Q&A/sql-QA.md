@@ -1319,4 +1319,225 @@ GROUP BY
 ORDER BY 
   month_number ASC;
 ```
+### 85. Display the patient_id and average length of stay for patients whose max stay in a single visit was over 10 days.
+* **Concepts Covered:** Date Arithmetic (`DATEDIFF`), Grouping Aggregation (`GROUP BY`), Aggregate Filtering (`HAVING`), Group Level Extremes (`MAX` / `AVG`).
+
+#### Method 1: Aggregate Group Filtering with HAVING (Optimal & Standard)
+Groups admission records by `patient_id`, calculates each patient's average length of stay, and uses `HAVING MAX(...) > 10` to include only patients with at least one visit exceeding 10 days.
+
+```sql
+SELECT 
+  patient_id, 
+  AVG(DATEDIFF(discharge_date, admission_date)) AS avg_length_of_stay 
+FROM admissions 
+GROUP BY 
+  patient_id 
+HAVING 
+  MAX(DATEDIFF(discharge_date, admission_date)) > 10;
+```
+### 86. Find cities where the total number of female patients is exactly zero.
+* **Concepts Covered:** Conditional Aggregation (`SUM(gender = 'F')`), Aggregate Group Filtering (`HAVING`), Subquery Exclusion (`NOT IN`).
+
+#### Method 1: Conditional Aggregation with HAVING (Optimal & Standard)
+Groups records by `city` and sums boolean flags (`1` for Female, `0` for Male) in `HAVING` to isolate cities where the female total is strictly 0.
+
+```sql
+SELECT 
+  city 
+FROM patients 
+GROUP BY 
+  city 
+HAVING 
+  SUM(gender = 'F') = 0;
+```
+### 87. Show the attending_doctor_id who has treated patients from at least 3 distinct provinces.
+* **Concepts Covered:** Relational Joins (`INNER JOIN`), Grouping Aggregation (`GROUP BY`), Distinct Value Counting (`COUNT(DISTINCT)`), Aggregate Group Filtering (`HAVING`).
+
+#### Method 1: Relational Join with HAVING COUNT(DISTINCT) (Optimal & Standard)
+Joins admission records with patient demographic data, groups by doctor ID, and counts unique `province_id` values per doctor to filter for those meeting or exceeding the 3-province threshold.
+
+```sql
+SELECT 
+  a.attending_doctor_id 
+FROM admissions a 
+JOIN patients p 
+  ON a.patient_id = p.patient_id 
+GROUP BY 
+  a.attending_doctor_id 
+HAVING 
+  COUNT(DISTINCT p.province_id) >= 3;
+```
+### 88. Categorize patients by weight classes using CASE WHEN.
+* **Concepts Covered:** Conditional Categorization (`CASE WHEN`), Range Filtering (`BETWEEN`), Derived Display Columns (`AS`).
+
+#### Method 1: Explicit Range Evaluation with BETWEEN (Optimal & Standard)
+Evaluates `weight` against explicit numerical boundaries to categorize patients into 'Underweight', 'Normal', or 'Overweight' weight classes.
+
+```sql
+SELECT 
+  patient_id, 
+  weight, 
+  CASE 
+    WHEN weight < 50 THEN 'Underweight' 
+    WHEN weight BETWEEN 50 AND 80 THEN 'Normal' 
+    WHEN weight > 80 THEN 'Overweight' 
+  END AS weight_class 
+FROM patients;
+```
+### 89. Show all patient details for patients who weigh more than the average weight of all patients in the database.
+* **Concepts Covered:** Scalar Subqueries (`WHERE column > (SELECT ...)`), Aggregate Summary Calculation (`AVG`).
+
+#### Method 1: Scalar Subquery in WHERE Clause (Optimal & Standard)
+Uses a nested scalar subquery to calculate the global average weight first, then filters row-by-row in the outer query for patients exceeding that threshold.
+
+```sql
+SELECT * 
+FROM patients 
+WHERE weight > (
+  SELECT AVG(weight) 
+  FROM patients
+);
+```
+### 90. Display the first name, last name, and a masked string where the first 3 letters of the last name are attached to their birth year.
+* **Concepts Covered:** String Manipulation (`CONCAT`, `SUBSTRING` / `LEFT`), Date Part Extraction (`YEAR` / `strftime`), Column Aliasing (`AS`).
+
+#### Method 1: Standard String Concatenation & Substring (Optimal & Standard)
+Extracts the initial 3 characters of `last_name`, pulls the 4-digit year from `birth_date`, and joins them together using `CONCAT()`.
+
+```sql
+SELECT 
+  first_name, 
+  last_name, 
+  CONCAT(SUBSTRING(last_name, 1, 3), YEAR(birth_date)) AS password 
+FROM patients;
+```
+### 91. Display all admissions where the diagnosis is the most common diagnosis in the table.
+* **Concepts Covered:** Scalar Subqueries (`WHERE column = (SELECT ...)`), Frequency Aggregation (`COUNT(*)`), Result Set Limiting (`ORDER BY ... DESC LIMIT 1`).
+
+#### Method 1: Scalar Subquery with Aggregation & Limit (Optimal & Standard)
+Uses an inner query to group admissions by `diagnosis`, counts frequencies to sort descending, and uses `LIMIT 1` to isolate the mode diagnosis for outer query filtering.
+
+```sql
+SELECT * 
+FROM admissions 
+WHERE diagnosis = (
+  SELECT diagnosis 
+  FROM admissions 
+  GROUP BY diagnosis 
+  ORDER BY COUNT(*) DESC 
+  LIMIT 1
+);
+```
+### 92. Translate gender codes ('M'/'F') into full text ('Male'/'Female') using a conditional statement.
+* **Concepts Covered:** Conditional Mapping (`CASE WHEN`), Value Translation, Column Aliasing (`AS`).
+
+#### Method 1: Explicit Conditional Evaluation (Optimal & Standard)
+Uses `CASE WHEN` to evaluate `gender` values line-by-line and outputs mapped full-text labels as `Gender_Full`.
+
+```sql
+SELECT 
+  *, 
+  CASE 
+    WHEN gender = 'M' THEN 'Male' 
+    WHEN gender = 'F' THEN 'Female' 
+  END AS Gender_Full 
+FROM patients;
+```
+### 93. Format first names to uppercase followed by character length in parentheses.
+* **Concepts Covered:** String Case Formatting (`UPPER`), String Length Calculation (`LENGTH` / `LEN`), String Concatenation (`CONCAT`).
+
+#### Method 1: Standard String Concatenation & Length (Optimal & Standard)
+Converts `first_name` to uppercase, calculates its string character length, and joins them with parenthesis formatting.
+
+```sql
+SELECT 
+  CONCAT(UPPER(first_name), ' (', LENGTH(first_name), ')') AS formatted_name 
+FROM patients;
+```
+### 94. Update doctor first names to include 'Dr. ' prefix if not already present.
+* **Concepts Covered:** Data Modification (`UPDATE`), String Prepending (`CONCAT`), Pattern Matching Safeguards (`NOT LIKE`).
+
+#### Method 1: Conditional Update with NOT LIKE (Optimal & Standard)
+Uses `UPDATE` with a `WHERE NOT LIKE 'Dr. %'` clause to ensure records that already carry the 'Dr. ' prefix are safely excluded from duplicate concatenation.
+
+```sql
+UPDATE doctors 
+SET first_name = CONCAT('Dr. ', first_name) 
+WHERE first_name NOT LIKE 'Dr. %';
+```
+### 95. Find patients who have never been admitted using NOT EXISTS.
+* **Concepts Covered:** Subquery Correlated Evaluation (`NOT EXISTS`), Unmatched Record Identification, Anti-Join Operations.
+
+#### Method 1: Correlated Subquery with NOT EXISTS (Optimal & Standard)
+Evaluates each patient row against the `admissions` table inside a subquery, keeping only patient records where no matching admission exists.
+
+```sql
+SELECT * 
+FROM patients p 
+WHERE NOT EXISTS (
+  SELECT 1 
+  FROM admissions a 
+  WHERE a.patient_id = p.patient_id
+);
+```
+### 96. Display patient details with a binary indicator (1/0) for allergy status.
+* **Concepts Covered:** Conditional Binary Flagging (`CASE WHEN`), Null Value Checking (`IS NOT NULL`), Fallback Assignment (`ELSE`), Column Aliasing (`AS`).
+
+#### Method 1: Explicit CASE WHEN with Numeric Flags (Optimal & Standard)
+Evaluates whether the `allergies` field contains a valid entry (not NULL and not empty) and maps it to a binary integer `1` (Yes) or `0` (No).
+
+```sql
+SELECT 
+  patient_id, 
+  first_name, 
+  CASE 
+    WHEN allergies IS NOT NULL AND allergies != '' THEN 1 
+    ELSE 0 
+  END AS Has_Allergies 
+FROM patients;
+```
+### 97. Find the patient with the second-highest height without using LIMIT or TOP.
+* **Concepts Covered:** Double Nested Subqueries (`WHERE column = (SELECT ...)`), Aggregate Max Searching (`MAX()`), Filtering Without Limit Syntax.
+
+#### Method 1: Double Nested Subqueries with MAX() (Optimal & Standard)
+Uses an inner scalar subquery to find the absolute maximum height, a middle subquery to find the highest height less than that maximum, and an outer query to fetch matching patient records.
+
+```sql
+SELECT * 
+FROM patients 
+WHERE height = (
+  SELECT MAX(height) 
+  FROM patients 
+  WHERE height < (
+    SELECT MAX(height) 
+    FROM patients
+  )
+);
+```
+### 98. Combine city and province code into standard mailing format ("City, PROVINCE_ID") using CONCAT_WS.
+* **Concepts Covered:** Separator String Concatenation (`CONCAT_WS`), Null-Safe Formatting, Column Aliasing (`AS`).
+
+#### Method 1: CONCAT_WS Separator Formatting (Optimal & Standard)
+Uses `CONCAT_WS(', ', ...)` to automatically join text fields using a comma-and-space separator while gracefully skipping NULL values if present.
+
+```sql
+SELECT 
+  city, 
+  province_id, 
+  CONCAT_WS(', ', city, province_id) AS format 
+FROM province_names;
+```
+### 99. Find all diagnoses that have been given to both male and female patients.
+* **Concepts Covered:** Grouping Aggregation (`GROUP BY`), Multi-Category Distinct Counting (`COUNT(DISTINCT)`), Group Filtering (`HAVING`).
+
+#### Method 1: GROUP BY with HAVING COUNT(DISTINCT gender) (Optimal & Standard)
+Groups admissions by `diagnosis` and counts unique gender distinct values per group, ensuring both 'M' and 'F' exist (distinct count = 2).
+
+```sql
+SELECT a.diagnosis 
+FROM patients p 
+JOIN admissions a ON p.patient_id = a.patient_id 
+GROUP BY a.diagnosis 
+HAVING COUNT(DISTINCT p.gender) = 2;
+```
 
