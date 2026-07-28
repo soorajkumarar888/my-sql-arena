@@ -1540,4 +1540,24 @@ JOIN admissions a ON p.patient_id = a.patient_id
 GROUP BY a.diagnosis 
 HAVING COUNT(DISTINCT p.gender) = 2;
 ```
+### 100. Display patients whose weight is equal to the minimum weight of patients in their same city.
+* **Concepts Covered:** Correlated Grouping, Aggregate Subqueries (`MIN()`), Self/Derived Table Joins, Partition Filtering.
 
+#### Method 1: Derived Table Aggregation Join (Optimal & Standard)
+Uses an inner subquery to calculate the minimum weight per city, then joins back to the main `patients` table on both `city` and `weight`.
+
+```sql
+SELECT 
+  p.first_name, 
+  p.last_name 
+FROM patients p 
+JOIN (
+  SELECT 
+    city, 
+    MIN(weight) AS min_weight 
+  FROM patients 
+  GROUP BY city
+) AS s 
+  ON p.city = s.city 
+WHERE p.weight = s.min_weight;
+```
