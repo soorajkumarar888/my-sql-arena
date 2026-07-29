@@ -1678,3 +1678,21 @@ UPDATE admissions
 SET discharge_date = COALESCE(discharge_date, CURRENT_DATE()) 
 WHERE discharge_date IS NULL;
 ```
+# 🚀 Phase 2: Advanced SQL, Window Functions & Analytics (#107 – #206)
+
+> **Focus Areas:** Window Functions (`OVER`, `PARTITION BY`, `ORDER BY`), Frame Specifications (`ROWS BETWEEN`), Navigational Queries (`LAG`/`LEAD`/`FIRST_VALUE`), Advanced CTEs, Recursive Logic, and Complex Healthcare Analytics.
+
+---
+
+### 🏛️ Key Concepts Quick Reference
+
+| Category | Functions / Keywords | Key Use Case |
+| :--- | :--- | :--- |
+| **Ranking** | `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`, `NTILE()` | Top-N per group, deduplication, quantile division |
+| **Navigational** | `LAG()`, `LEAD()`, `FIRST_VALUE()`, `LAST_VALUE()` | Row-to-row comparisons, time gaps, visit history |
+| **Aggregate Windows** | `SUM() OVER()`, `AVG() OVER()`, `COUNT() OVER()` | Running totals, moving averages, group benchmark comparisons |
+| **Frame Bounds** | `ROWS BETWEEN ... PRECEDING AND ... FOLLOWING` | Rolling multi-day calculations, centered metrics |
+| **Advanced CTEs** | `WITH ... AS (...)`, Recursive CTEs | Gaps & Islands problems, date generation, complex pipelines |
+
+---
+
