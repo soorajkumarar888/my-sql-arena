@@ -1561,3 +1561,120 @@ JOIN (
   ON p.city = s.city 
 WHERE p.weight = s.min_weight;
 ```
+### 101. Calculate the percentage of total patients that are female.
+* **Concepts Covered:** Conditional Aggregation (`CASE WHEN` / Boolean Flags), Ratio Calculation, Integer Division Safety, Decimal Rounding (`ROUND`).
+
+#### Method 1: AVG() Boolean Shortcut (Optimal for MySQL / SQLite)
+Averages a boolean condition (`gender = 'F'`), which returns a decimal ratio (0.0 to 1.0), then scales by 100 and rounds to a clean integer.
+
+```sql
+SELECT 
+  ROUND(AVG(gender = 'F') * 100) AS percentage_of_females 
+FROM patients;
+```
+### 102. Find admissions where the diagnosis text contains the patient's own first name.
+* **Concepts Covered:** Dynamic Pattern Matching (`LIKE`), String Concatenation (`CONCAT`), Wildcard Search (`%`), Dynamic Column Evaluation.
+
+#### Method 1: Dynamic Pattern Matching with CONCAT (Optimal & Standard)
+Dynamically builds a wildcard search string combining leading/trailing `%` characters with `p.first_name` to perform a substring match inside `a.diagnosis`.
+
+```sql
+SELECT 
+  p.patient_id, 
+  a.diagnosis 
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id 
+WHERE 
+  a.diagnosis LIKE CONCAT('%', p.first_name, '%');
+```
+### 103. Find all doctors who have treated at least one patient with a Penicillin allergy.
+* **Concepts Covered:** Filtering Subqueries (`WHERE ... IN`), Pattern Substring Matching (`LIKE`), Deduplication (`DISTINCT`), Multi-Table Joins.
+
+#### Method 1: Subquery Filtering with IN (Optimal & Direct)
+Filters doctors whose IDs appear in a nested subquery that retrieves attending doctor IDs associated with patients who have 'Penicillin' in their allergies.
+
+```sql
+SELECT 
+  first_name, 
+  last_name 
+FROM doctors 
+WHERE doctor_id IN (
+  SELECT DISTINCT a.attending_doctor_id 
+  FROM admissions a 
+  JOIN patients p ON a.patient_id = p.patient_id 
+  WHERE p.allergies LIKE '%Penicillin%'
+);
+```
+### 104. Output a formatted summary string for every patient admission.
+* **Concepts Covered:** String Concatenation (`CONCAT`), Date-to-Text Formatting, Table Joins (`JOIN`), Column Aliasing (`AS`).
+
+#### Method 1: CONCAT String Formatting (Optimal & Standard)
+Joins `patients` and `admissions` to combine string literals and column values into a single formatted sentence per admission.
+
+```sql
+SELECT 
+  CONCAT(
+    p.first_name, ' ', 
+    p.last_name, ' was admitted on ', 
+    a.admission_date, ' for ', 
+    a.diagnosis
+  ) AS admission_details
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id;
+```
+### 105. Find the average height of patients who do not live in 'Toronto', grouped by province name.
+* **Concepts Covered:** Grouping Aggregation (`GROUP BY`), Average Function (`AVG()`), Inequality Filtering (`!=` / `<>`), Table Joins (`JOIN`).
+
+#### Method 1: JOIN with WHERE Filter & GROUP BY (Optimal & Standard)
+Filters out patients residing in 'Toronto' before grouping by `province_name` and calculating the average height per province.
+
+```sql
+SELECT 
+  pr.province_name, 
+  ROUND(AVG(p.height), 2) AS avg_height 
+FROM patients p 
+JOIN province_names pr 
+  ON p.province_id = pr.province_id 
+WHERE p.city != 'Toronto' 
+GROUP BY pr.province_name;
+```
+#### Method 2: Derived Table Subquery with Explicit Column Aliasing
+Uses an inner subquery to pre-join and filter patients from non-Toronto cities. Explicit column aliases (patient_prov_id, master_prov_id) are assigned to avoid column name collisions exiting the subquery boundary before the outer GROUP BY executes.
+
+```sql
+SELECT 
+  sub.province_name, 
+  ROUND(AVG(sub.height), 2) AS avg_height 
+FROM (
+  SELECT 
+    p.height, 
+    p.province_id AS patient_prov_id, 
+    pr.province_id AS master_prov_id, 
+    pr.province_name 
+  FROM patients p 
+  JOIN province_names pr 
+    ON p.province_id = pr.province_id 
+  WHERE p.city != 'Toronto'
+) AS sub 
+GROUP BY sub.province_name;
+```
+### 106. Update empty (`NULL`) discharge dates in admissions to the current date.
+* **Concepts Covered:** Data Modification (`UPDATE`), Conditional Filtering (`WHERE ... IS NULL`), Current Date Functions (`CURRENT_DATE()` / `CURDATE()`), `COALESCE`.
+
+#### Method 1: Standard UPDATE with IS NULL Filter (Optimal)
+Targeted update that modifies only rows where `discharge_date` is currently `NULL`, setting them to the current system date.
+
+```sql
+UPDATE admissions 
+SET discharge_date = CURRENT_DATE() 
+WHERE discharge_date IS NULL;
+```
+#### Method 2: COALESCE Fallback UPDATE
+Uses COALESCE to evaluate existing dates and fall back to the current date if NULL.
+```sql
+UPDATE admissions 
+SET discharge_date = COALESCE(discharge_date, CURRENT_DATE()) 
+WHERE discharge_date IS NULL;
+```
