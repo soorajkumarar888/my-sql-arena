@@ -1696,3 +1696,38 @@ WHERE discharge_date IS NULL;
 
 ---
 
+### 107. For each patient, rank their admissions chronologically from earliest to latest using ROW_NUMBER().
+* **Concepts Covered:** Window Functions (`OVER`), Partitioning (`PARTITION BY`), Sorting Windows (`ORDER BY`), Sequential Ranking (`ROW_NUMBER()`).
+
+#### SQL Method
+Assigns a unique chronological sequence number to every admission associated with a patient using `ROW_NUMBER()`.
+
+```sql
+SELECT 
+  a.patient_id, 
+  a.admission_date, 
+  ROW_NUMBER() OVER (
+    PARTITION BY a.patient_id 
+    ORDER BY a.admission_date
+  ) AS adrank 
+FROM admissions a;
+```
+### 108. Find the most recent admission record for every patient without using MAX() with GROUP BY.
+* **Concepts Covered:** Deduplication, Window Functions (`ROW_NUMBER()`), Descending Order (`ORDER BY ... DESC`), Derived Table Filtering.
+
+#### SQL Method
+Ranks each patient's admissions in descending chronological order inside a subquery, then filters for `adrank = 1` in the outer query to extract complete details of their latest visit.
+
+```sql
+SELECT * 
+FROM (
+  SELECT 
+    *, 
+    ROW_NUMBER() OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date DESC
+    ) AS adrank 
+  FROM admissions
+) AS sub 
+WHERE adrank = 1;
+```
