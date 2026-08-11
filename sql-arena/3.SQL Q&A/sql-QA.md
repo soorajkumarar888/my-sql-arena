@@ -1731,3 +1731,84 @@ FROM (
 ) AS sub 
 WHERE adrank = 1;
 ```
+### 109. Rank doctors based on the total number of admissions they handled using DENSE_RANK().
+* **Concepts Covered:** Aggregate Functions (`COUNT`), Window Functions (`DENSE_RANK()`), Table Joins (`JOIN`), Grouping (`GROUP BY`).
+
+#### SQL Method
+Groups admissions by doctor to sum up total handled admissions, then applies `DENSE_RANK()` in descending order so doctors with the same admission total share the same rank without skipping rank numbers.
+
+```sql
+SELECT 
+  d.doctor_id,
+  d.first_name,
+  d.last_name,
+  COUNT(a.admission_date) AS total_admissions,
+  DENSE_RANK() OVER (
+    ORDER BY COUNT(a.admission_date) DESC
+  ) AS doctor_rank
+FROM doctors d
+JOIN admissions a 
+  ON d.doctor_id = a.attending_doctor_id
+GROUP BY 
+  d.doctor_id, 
+  d.first_name, 
+  d.last_name;
+```
+### 110. Find the top 3 highest-weight patients in each province using `ROW_NUMBER()`.
+* **Concepts Covered:** Subqueries / CTEs, Window Functions (`ROW_NUMBER()`), Partitioning (`PARTITION BY`), Filtering (`WHERE`).
+
+#### SQL Method
+Partitions patient records by `province_id` and orders them by `weight` in descending order (`DESC`) so that the heaviest patients in each province are assigned row numbers `1`, `2`, and `3`. A subquery wraps this logic to filter for `weight_rank BETWEEN 1 AND 3`, using a meaningful alias (`weight_rank`) to clearly describe the ranked output.
+
+```sql
+SELECT 
+  patient_id, 
+  province_id, 
+  weight
+FROM (
+  SELECT 
+    patient_id, 
+    province_id, 
+    weight, 
+    ROW_NUMBER() OVER (
+      PARTITION BY province_id 
+      ORDER BY weight DESC
+    ) AS weight_rank 
+  FROM patients
+) AS ranked_patients 
+WHERE weight_rank BETWEEN 1 AND 3;
+```
+### 111. Divide all patients into 4 equal weight quartiles using `NTILE(4)`.
+* **Concepts Covered:** Window Functions (`NTILE()`), Data Binning / Bucketing, Ordering (`ORDER BY`).
+
+#### SQL Method
+Applies `NTILE(4)` over the entire table ordered by `weight` in ascending order (`ASC`). This splits the patients evenly into 4 buckets (quartiles), where bucket `1` contains the lightest 25% of patients and bucket `4` contains the heaviest 25%.
+
+```sql
+SELECT 
+  patient_id,
+  first_name,
+  last_name,
+  weight,
+  NTILE(4) OVER (
+    ORDER BY weight ASC
+  ) AS weight_quartile
+FROM patients;
+```
+### 112. Rank patients within each city by height, where ties receive the same rank and leave gaps in ranking (`RANK()`).
+* **Concepts Covered:** Window Functions (`RANK()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Partitions patient records by `city` and applies `RANK()` ordered by `height DESC` so that patients inside each city are ranked from tallest to shortest. When patients share the exact same height, they receive the same rank, and the next rank skips numbers accordingly (e.g., 1, 2, 2, 4).
+
+```sql
+SELECT 
+  patient_id, 
+  city, 
+  height, 
+  RANK() OVER (
+    PARTITION BY city 
+    ORDER BY height DESC
+  ) AS height_rank 
+FROM patients;
+```
