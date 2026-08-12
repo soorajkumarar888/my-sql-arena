@@ -1812,3 +1812,122 @@ SELECT
   ) AS height_rank 
 FROM patients;
 ```
+### 113. Identify patients who have had more than 3 admissions, and select only their 2nd and 4th admission records.
+* **Concepts Covered:** Subqueries / CTEs, Window Functions (`ROW_NUMBER()`, `COUNT() OVER`), Pre-filtering (`HAVING`), Performance Optimization.
+
+#### Method 1: Subquery Approach (Single-Pass Window Functions)
+Uses `ROW_NUMBER()` to sequence admission records and `COUNT() OVER()` to calculate total patient admissions in a single subquery pass, filtering for patients with > 3 admissions and extracting their 2nd and 4th records.
+
+```sql
+SELECT 
+  patient_id,
+  admission_date,
+  discharge_date,
+  diagnosis,
+  attending_doctor_id
+FROM (
+  SELECT 
+    patient_id,
+    admission_date,
+    discharge_date,
+    diagnosis,
+    attending_doctor_id,
+    ROW_NUMBER() OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+    ) AS rownumber,
+    COUNT(patient_id) OVER (
+      PARTITION BY patient_id
+    ) AS rowcount
+  FROM admissions
+) AS tab
+WHERE rowcount > 3 
+  AND rownumber IN (2, 4);
+```
+#### Method 2: Optimized CTE Approach (Early Pre-Filtering)
+Pre-filters qualifying patient IDs using GROUP BY ... HAVING COUNT(*) > 3 before applying window functions. This reduces memory overhead by running ROW_NUMBER() only on eligible patients.
+```sql
+WITH FrequentPatients AS (
+  SELECT patient_id
+  FROM admissions
+  GROUP BY patient_id
+  HAVING COUNT(*) > 3
+),
+RankedAdmissions AS (
+  SELECT 
+    a.patient_id,
+    a.admission_date,
+    a.discharge_date,
+    a.diagnosis,
+    a.attending_doctor_id,
+    ROW_NUMBER() OVER (
+      PARTITION BY a.patient_id 
+      ORDER BY a.admission_date ASC
+    ) AS rownumber
+  FROM admissions a
+  JOIN FrequentPatients fp 
+    ON a.patient_id = fp.patient_id
+)
+SELECT 
+  patient_id,
+  admission_date,
+  discharge_date,
+  diagnosis,
+  attending_doctor_id
+FROM RankedAdmissions
+WHERE rownumber IN (2, 4);
+```
+### 114. Find the second most common diagnosis per province using ranking functions.
+* **Concepts Covered:** Common Table Expressions (`WITH`), Aggregation (`COUNT` / `GROUP BY`), Window Functions (`DENSE_RANK()`), Partitioning (`PARTITION BY`).
+
+#### Method 1: Optimized CTE Approach (Recommended)
+Groups diagnosis records by `province_id` and `diagnosis` to compute occurrence counts, then applies `DENSE_RANK()` partitioned by `province_id` in descending order of frequency. The outer query filters for `rank_num = 2` to extract the second most common diagnosis per province.
+
+```sql
+WITH DiagnosisCounts AS (
+  SELECT 
+    p.province_id,
+    a.diagnosis,
+    COUNT(*) AS diagnosis_count
+  FROM patients p
+  JOIN admissions a 
+    ON p.patient_id = a.patient_id
+  GROUP BY 
+    p.province_id, 
+    a.diagnosis
+),
+RankedDiagnoses AS (
+  SELECT 
+    province_id,
+    diagnosis,
+    diagnosis_count,
+    DENSE_RANK() OVER (
+      PARTITION BY province_id 
+      ORDER BY diagnosis_count DESC
+    ) AS rank_num
+  FROM DiagnosisCounts
+)
+SELECT 
+  province_id,
+  diagnosis,
+  diagnosis_count
+FROM RankedDiagnoses
+WHERE rank_num = 2;
+```
+### 115. Assign a unique sequence number to every admission associated with each doctor, sorted by admission date.
+* **Concepts Covered:** Window Functions (`ROW_NUMBER()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+####  Method 1
+Uses `ROW_NUMBER()` partitioned by `attending_doctor_id` and ordered by `admission_date` in ascending order. This assigns an incremental sequential number (`1, 2, 3...`) to each doctor's admissions sorted by date.
+
+```sql
+SELECT 
+  attending_doctor_id, 
+  patient_id, 
+  admission_date, 
+  ROW_NUMBER() OVER (
+    PARTITION BY attending_doctor_id 
+    ORDER BY admission_date ASC
+  ) AS sequence_number 
+FROM admissions;
+```
