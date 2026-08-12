@@ -1931,3 +1931,28 @@ SELECT
   ) AS sequence_number 
 FROM admissions;
 ```
+### 116. List all patients whose weight ranks in the top 10% within their province.
+* **Concepts Covered:** Common Table Expressions (`WITH`), Window Functions (`NTILE()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### Method
+Uses `NTILE(10)` partitioned by `province_id` and ordered by `weight DESC` to divide patients within each province into 10 equal deciles (10% buckets) from heaviest to lightest. Filtering for `weight_decile = 1` isolates the top 10% heaviest patients in each province.
+
+```sql
+WITH RankedPatients AS (
+  SELECT 
+    patient_id, 
+    weight, 
+    province_id, 
+    NTILE(10) OVER (
+      PARTITION BY province_id 
+      ORDER BY weight DESC
+    ) AS weight_decile 
+  FROM patients
+)
+SELECT 
+  patient_id, 
+  weight, 
+  province_id 
+FROM RankedPatients 
+WHERE weight_decile = 1;
+```
