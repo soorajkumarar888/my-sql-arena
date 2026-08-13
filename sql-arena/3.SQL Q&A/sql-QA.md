@@ -1956,3 +1956,244 @@ SELECT
 FROM RankedPatients 
 WHERE weight_decile = 1;
 ```
+### 117. Rank patients by age (calculated from `birth_date`) within each gender group.
+* **Concepts Covered:** Date Functions (`TIMESTAMPDIFF`, `CURDATE`), Window Functions (`DENSE_RANK()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Uses `TIMESTAMPDIFF(YEAR, birth_date, CURDATE())` to calculate each patient's age in years. Applies `DENSE_RANK()` partitioned by `gender` and sorted by `birth_date ASC` (or `age DESC`) to rank patients within their gender group from oldest to youngest.
+
+```sql
+SELECT 
+  patient_id, 
+  gender,
+  birth_date,
+  TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) AS age, 
+  DENSE_RANK() OVER (
+    PARTITION BY gender 
+    ORDER BY birth_date ASC
+  ) AS age_rank
+FROM patients;
+```
+### 118. Find the doctor who treated the tallest patient in each province using window ranking.
+* **Concepts Covered:** Table Joins (`JOIN`), Common Table Expressions (`WITH`), Window Functions (`DENSE_RANK()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Joins `patients` with `admissions` and uses `DENSE_RANK()` partitioned by `province_id` and ordered by `height DESC` to rank admissions by patient height within each province. Filtering for `height_rank = 1` isolates the attending doctor(s) who treated the tallest patient(s) in every province.
+
+```sql
+WITH RankedPatients AS (
+  SELECT 
+    a.attending_doctor_id, 
+    p.province_id, 
+    p.height, 
+    DENSE_RANK() OVER (
+      PARTITION BY p.province_id 
+      ORDER BY p.height DESC
+    ) AS height_rank
+  FROM patients p 
+  JOIN admissions a 
+    ON p.patient_id = a.patient_id
+)
+SELECT 
+  attending_doctor_id,
+  province_id,
+  height
+FROM RankedPatients 
+WHERE height_rank = 1;
+```
+### 119. Partition patients by city and rank them by BMI ($\text{weight} / \text{height}^2$).
+* **Concepts Covered:** Mathematical Functions (`POWER`, `ROUND`), Window Functions (`DENSE_RANK()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### Method 1: Direct Window Calculation
+Calculates BMI using `weight / POWER(height / 100.0, 2)` and applies `DENSE_RANK()` partitioned by `city` in descending order of BMI.
+
+```sql
+SELECT 
+  patient_id, 
+  city, 
+  ROUND(weight / POWER(height / 100.0, 2), 2) AS bmi, 
+  DENSE_RANK() OVER (
+    PARTITION BY city 
+    ORDER BY weight / POWER(height / 100.0, 2) DESC
+  ) AS bmi_rank 
+FROM patients;
+```
+### 120. Identify ties in admission counts among doctors and display them using both `RANK()` and `DENSE_RANK()` to show the difference.
+* **Concepts Covered:** Aggregation (`GROUP BY`), Window Functions (`RANK()`, `DENSE_RANK()`), Sorting (`ORDER BY`), Tie Handling.
+
+#### SQL Method
+Groups admissions by `attending_doctor_id` to compute total admissions per doctor. Applies both `RANK()` and `DENSE_RANK()` ordered by `COUNT(admission_date) DESC` to clearly highlight how `RANK()` introduces gaps in sequence after tied values while `DENSE_RANK()` keeps rankings consecutive.
+
+```sql
+SELECT 
+  attending_doctor_id, 
+  COUNT(admission_date) AS admission_count, 
+  RANK() OVER (
+    ORDER BY COUNT(admission_date) DESC
+  ) AS justrank,
+  DENSE_RANK() OVER (
+    ORDER BY COUNT(admission_date) DESC
+  ) AS densrrank
+FROM admissions 
+GROUP BY attending_doctor_id;
+```
+### 121. Rank admissions by length of stay (`discharge_date - admission_date`) per diagnosis category.
+* **Concepts Covered:** Date Functions (`DATEDIFF`), Window Functions (`DENSE_RANK()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Calculates the length of stay for each admission using `DATEDIFF(discharge_date, admission_date)`. Uses `DENSE_RANK()` partitioned by `diagnosis` and sorted by length of stay in descending order to rank patient stays within each medical category.
+
+```sql
+SELECT 
+  patient_id,
+  diagnosis,
+  admission_date,
+  discharge_date,
+  DATEDIFF(discharge_date, admission_date) AS length_of_stay,
+  DENSE_RANK() OVER (
+    PARTITION BY diagnosis 
+    ORDER BY DATEDIFF(discharge_date, admission_date) DESC
+  ) AS stay_rank
+FROM admissions;
+```
+### 122. Select the top 1 most frequent attending doctor for each patient.
+* **Concepts Covered:** Common Table Expressions (`WITH`), Aggregation (`GROUP BY`), Window Functions (`DENSE_RANK()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Groups admissions by `patient_id` and `attending_doctor_id` to calculate total visit counts. Uses `DENSE_RANK()` partitioned by `patient_id` and ordered by visit count descending to rank doctors per patient, then filters for `doctor_rank = 1`.
+
+```sql
+WITH DoctorVisits AS (
+  SELECT 
+    patient_id, 
+    attending_doctor_id, 
+    COUNT(*) AS total_visits 
+  FROM admissions 
+  GROUP BY 
+    patient_id, 
+    attending_doctor_id
+),
+RankedDoctors AS (
+  SELECT 
+    patient_id, 
+    attending_doctor_id, 
+    total_visits, 
+    DENSE_RANK() OVER (
+      PARTITION BY patient_id 
+      ORDER BY total_visits DESC
+    ) AS doctor_rank 
+  FROM DoctorVisits
+)
+SELECT 
+  patient_id, 
+  attending_doctor_id, 
+  total_visits 
+FROM RankedDoctors 
+WHERE doctor_rank = 1;
+```
+### 123. Assign a row number to patients ordered by `last_name, first_name` within each province.
+* **Concepts Covered:** Window Functions (`ROW_NUMBER()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Uses `ROW_NUMBER()` partitioned by `province_id` and ordered by `last_name, first_name` to assign sequential row numbers to patients sorted alphabetically within each province group.
+
+```sql
+SELECT 
+  patient_id,
+  first_name,
+  last_name,
+  province_id,
+  ROW_NUMBER() OVER (
+    PARTITION BY province_id 
+    ORDER BY last_name ASC, first_name ASC
+  ) AS rows1
+FROM patients;
+```
+### 124. Find the 5th oldest patient in each city.
+* **Concepts Covered:** Common Table Expressions (`WITH`), Date Functions (`TIMESTAMPDIFF`), Window Functions (`DENSE_RANK()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Calculates each patient's age using `TIMESTAMPDIFF(YEAR, birth_date, CURDATE())`. Uses `DENSE_RANK()` partitioned by `city` and ordered by age descending (or `birth_date ASC`) to rank patients by age within their respective city. Filters the CTE for `age_rank = 5` to select the 5th oldest patient in each city.
+
+```sql
+WITH RankedPatients AS (
+  SELECT 
+    patient_id, 
+    first_name, 
+    last_name, 
+    city, 
+    birth_date,
+    TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) AS age, 
+    DENSE_RANK() OVER (
+      PARTITION BY city 
+      ORDER BY TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) DESC
+    ) AS age_rank 
+  FROM patients
+)
+SELECT 
+  patient_id, 
+  first_name, 
+  last_name, 
+  city, 
+  birth_date,
+  age 
+FROM RankedPatients 
+WHERE age_rank = 5;
+```
+### 125. Partition admissions by year and rank the peak admission days per year.
+* **Concepts Covered:** Date Functions (`YEAR`), Aggregation (`GROUP BY`), Window Functions (`DENSE_RANK()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Groups admissions by `admission_date` to determine daily admission counts, then uses `DENSE_RANK()` partitioned by `YEAR(admission_date)` and ordered by daily total descending to isolate peak admission days for every year.
+
+```sql
+WITH DailyAdmissions AS (
+  SELECT 
+    admission_date, 
+    YEAR(admission_date) AS admission_year, 
+    COUNT(*) AS total_admissions 
+  FROM admissions 
+  GROUP BY 
+    admission_date, 
+    YEAR(admission_date)
+),
+RankedDays AS (
+  SELECT 
+    admission_date, 
+    admission_year, 
+    total_admissions, 
+    DENSE_RANK() OVER (
+      PARTITION BY admission_year 
+      ORDER BY total_admissions DESC
+    ) AS peak_rank 
+  FROM DailyAdmissions
+)
+SELECT 
+  admission_date, 
+  admission_year, 
+  total_admissions 
+FROM RankedDays 
+WHERE peak_rank = 1;
+```
+### 126. Divide doctors into 3 tiers based on their total patient volume using `NTILE(3)`
+* **Concepts Covered:** Common Table Expressions (`WITH`), Aggregation (`GROUP BY`), Window Functions (`NTILE()`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Groups admissions by `attending_doctor_id` to compute each doctor's total patient volume. Applies `NTILE(3) OVER (ORDER BY total_patients DESC)` to divide doctors evenly into 3 performance tiers based on volume.
+
+```sql
+WITH DoctorVolumes AS (
+  SELECT 
+    attending_doctor_id, 
+    COUNT(patient_id) AS total_patients 
+  FROM admissions 
+  GROUP BY attending_doctor_id
+)
+SELECT 
+  attending_doctor_id, 
+  total_patients, 
+  NTILE(3) OVER (
+    ORDER BY total_patients DESC
+  ) AS volume_tier 
+FROM DoctorVolumes;
+```
