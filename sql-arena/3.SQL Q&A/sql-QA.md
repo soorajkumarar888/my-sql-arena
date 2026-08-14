@@ -2228,4 +2228,304 @@ with tab as (select patient_id, admission_date, lag(admission_date,1)
 from admissions)
 select *, datediff(admission_date,previous_date) as no_of_days from tab;
 ```
+### 128. Identify readmitted patients who were readmitted within 30 days of their prior discharge date.
+* **Concepts Covered:** Common Table Expressions (`WITH`), Window Functions (`LEAD()`), Date Functions (`DATEDIFF()`), Deduplication (`DISTINCT`).
 
+#### SQL Method
+Uses `LEAD(admission_date)` with chronological ordering (`ASC`) partitioned by `patient_id` to look forward to the subsequent admission date, then calculates the gap from the current stay's `discharge_date` using `DATEDIFF()`.
+
+```sql
+WITH NextAdmissions AS (
+  SELECT 
+    patient_id,
+    DATEDIFF(
+      LEAD(admission_date) OVER (
+        PARTITION BY patient_id 
+        ORDER BY admission_date ASC
+      ),
+      discharge_date
+    ) AS days_to_next_admission
+  FROM admissions
+)
+SELECT DISTINCT 
+  patient_id
+FROM NextAdmissions
+WHERE days_to_next_admission BETWEEN 0 AND 30;
+```
+### 129. Compare each patient's current admission diagnosis with their immediately preceding diagnosis.
+* **Concepts Covered:** Window Functions (`LAG()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Partitions records by `patient_id` and sorts chronologically by `admission_date ASC`, using `LAG(diagnosis)` to retrieve the previous visit's diagnosis for direct side-by-side comparison.
+
+```sql
+SELECT 
+  patient_id, 
+  admission_date, 
+  diagnosis AS current_diagnosis, 
+  LAG(diagnosis) OVER (
+    PARTITION BY patient_id 
+    ORDER BY admission_date ASC
+  ) AS previous_diagnosis
+FROM admissions;
+```
+### 130. Display each patient's height alongside the height of the next patient admitted in the same hospital.
+* **Concepts Covered:** `JOIN`, Window Functions (`LEAD()`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Joins `patients` and `admissions` on `patient_id` and uses `LEAD(p.height, 1) OVER (ORDER BY a.admission_date ASC)` to display each admitted patient's height next to the height of the patient admitted immediately after them.
+
+```sql
+SELECT 
+  a.patient_id, 
+  p.height, 
+  a.admission_date,
+  LEAD(p.height, 1) OVER (
+    ORDER BY a.admission_date ASC
+  ) AS lead_height
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id;
+```
+### 131. Find the primary attending doctor assigned to a patient's very first admission (`FIRST_VALUE`).
+* **Concepts Covered:** Window Functions (`FIRST_VALUE()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Partitions records by `patient_id` and sorts chronologically by `admission_date ASC` so `FIRST_VALUE(attending_doctor_id)` anchors to and returns the attending doctor from the patient's earliest admission.
+
+```sql
+SELECT 
+  patient_id, 
+  admission_date, 
+  attending_doctor_id, 
+  FIRST_VALUE(attending_doctor_id) OVER (
+    PARTITION BY patient_id 
+    ORDER BY admission_date ASC
+  ) AS first_attending_doctor_id
+FROM admissions;
+```
+### 132. Calculate the weight difference between each patient's current record and the overall heaviest patient in their city.
+* **Concepts Covered:** Window Functions (`FIRST_VALUE` / `MAX() OVER`), In-query Arithmetic Subtraction, Partitioning (`PARTITION BY`).
+
+#### SQL Method 1: Using FIRST_VALUE
+Partitions by `city`, orders by `weight DESC` to put the max weight first, and subtracts the current row's `weight`.
+
+```sql
+SELECT 
+  patient_id, 
+  city, 
+  weight,
+  FIRST_VALUE(weight) OVER (
+    PARTITION BY city 
+    ORDER BY weight DESC
+  ) - weight AS weight_diff 
+FROM patients;
+```
+### 133. Detect cases where a patient changed primary attending doctors between consecutive admissions.
+* **Concepts Covered:** Window Functions (`LAG()`), Conditional Logic (`CASE WHEN`), Handling `NULL`s, Partitioning (`PARTITION BY`).
+
+#### SQL Method
+Uses `LAG(attending_doctor_id)` partitioned by `patient_id` and ordered chronologically by `admission_date ASC`, then applies a `CASE WHEN` statement to identify whether the attending physician differs from the previous visit.
+
+```sql
+SELECT 
+  patient_id, 
+  admission_date, 
+  attending_doctor_id, 
+  LAG(attending_doctor_id) OVER (
+    PARTITION BY patient_id 
+    ORDER BY admission_date ASC
+  ) AS previous_doctor_id,
+  CASE 
+    WHEN LAG(attending_doctor_id) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+    ) IS NULL THEN 'First Admission'
+    WHEN attending_doctor_id <> LAG(attending_doctor_id) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+    ) THEN 'Doctor Changed'
+    ELSE 'Same Doctor'
+  END AS doctor_change_status
+FROM admissions;
+```
+### 134. Calculate the change in total daily hospital admission count compared to the previous day.
+* **Concepts Covered:** Common Table Expressions (`WITH`), Aggregation (`COUNT` / `GROUP BY`), Window Functions (`LAG()`), Day-over-Day Math.
+
+#### SQL Method
+Aggregates admissions count by `admission_date`, then applies `LAG()` ordered chronologically to calculate the day-over-day net change (`today - yesterday`).
+
+```sql
+WITH DailyAdmissions AS (
+  SELECT 
+    admission_date, 
+    COUNT(*) AS total_admissions
+  FROM admissions
+  GROUP BY admission_date
+)
+SELECT 
+  admission_date, 
+  total_admissions, 
+  total_admissions - LAG(total_admissions, 1) OVER (
+    ORDER BY admission_date ASC
+  ) AS daily_change
+FROM DailyAdmissions;
+```
+### 135. For each patient, calculate the time gap (in days) between their first ever admission and their most recent admission.
+* **Concepts Covered:** Date Difference (`DATEDIFF`), Aggregations (`MIN`/`MAX`), Window Functions (`FIRST_VALUE`, `LAST_VALUE`, `MIN() OVER`), Window Framing (`ROWS BETWEEN`), Subqueries / Self-Joins (`ROW_NUMBER()`).
+
+---
+
+#### Method 1: Standard Aggregation (Most Optimized & Production Standard)
+Groups records by `patient_id`, identifies the boundary dates using `MIN(admission_date)` and `MAX(admission_date)`, and computes the day span using `DATEDIFF`.
+
+```sql
+SELECT 
+  patient_id,
+  MIN(admission_date) AS first_admission_date,
+  MAX(admission_date) AS most_recent_admission_date,
+  DATEDIFF(MAX(admission_date), MIN(admission_date)) AS total_days_span
+FROM admissions
+GROUP BY patient_id;
+```
+#### Method 2: Windowed Aggregates (MIN() / MAX() OVER)
+Calculates the patient-level date span without collapsing individual visit records, preserving all underlying admission rows.
+
+```sql
+SELECT 
+  patient_id,
+  admission_date,
+  DATEDIFF(
+    MAX(admission_date) OVER (PARTITION BY patient_id),
+    MIN(admission_date) OVER (PARTITION BY patient_id)
+  ) AS total_days_span
+FROM admissions;
+```
+#### Method 3: FIRST_VALUE() with Dual Ordering
+Uses FIRST_VALUE() twice: once ordered ASC for the earliest date, and once ordered DESC for the most recent date. Uses DISTINCT to return one row per patient.
+
+```sql
+SELECT DISTINCT
+  patient_id,
+  DATEDIFF(
+    FIRST_VALUE(admission_date) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date DESC
+    ),
+    FIRST_VALUE(admission_date) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+    )
+  ) AS total_days_span
+FROM admissions;
+```
+### 136. Find the last recorded diagnosis for each patient using `LAST_VALUE()` with proper window frame bounds.
+* **Concepts Covered:** Window Functions (`LAST_VALUE()`), Window Frame Bounds (`ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`), Partitioning (`PARTITION BY`).
+
+#### SQL Method
+Partitions records by `patient_id` ordered chronologically by `admission_date ASC`. An explicit window frame `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING` expands the window beyond the default current row boundary, allowing `LAST_VALUE()` to accurately return the latest diagnosis.
+
+```sql
+SELECT DISTINCT
+  patient_id, 
+  LAST_VALUE(diagnosis) OVER (
+    PARTITION BY patient_id 
+    ORDER BY admission_date ASC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+  ) AS last_recorded_diagnosis
+FROM admissions;
+```
+### 137. Find the previous admission date for each doctor's patients.
+* **Concepts Covered:** Window Functions (`LAG()`), Multi-Column Partitioning (`PARTITION BY`), Chronological Sorting.
+
+#### SQL Method
+Partitions records simultaneously by `attending_doctor_id` and `patient_id` ordered by `admission_date ASC` to track consecutive visit timelines per doctor-patient relationship using `LAG()`.
+
+```sql
+SELECT 
+  attending_doctor_id, 
+  patient_id, 
+  admission_date, 
+  LAG(admission_date, 1) OVER (
+    PARTITION BY attending_doctor_id, patient_id 
+    ORDER BY admission_date ASC
+  ) AS previous_admission_date
+FROM admissions;
+```
+### 138. Calculate the percentage change in admission counts month-over-month using `LAG()`.
+* **Concepts Covered:** Common Table Expressions (`CTE`), Window Functions (`LAG()`), Monthly Aggregations (`GROUP BY`), Percentage Difference Formula, Floating-point division (`100.0`), `ROUND()`.
+
+#### SQL Method
+First aggregates admission counts per month inside a CTE, then computes month-over-month (MoM) percentage change using `LAG()` to reference the prior month's count.
+
+```sql
+WITH MonthlyCounts AS (
+  SELECT 
+    MONTH(admission_date) AS admission_month,
+    COUNT(*) AS total_admissions
+  FROM admissions
+  GROUP BY MONTH(admission_date)
+)
+SELECT 
+  admission_month,
+  total_admissions,
+  LAG(total_admissions) OVER (ORDER BY admission_month ASC) AS previous_month_admissions,
+  ROUND(
+    (total_admissions - LAG(total_admissions) OVER (ORDER BY admission_month ASC)) * 100.0 
+    / LAG(total_admissions) OVER (ORDER BY admission_month ASC), 
+    2
+  ) AS mom_pct_change
+FROM MonthlyCounts;
+```
+### 139. Identify patients whose diagnosis changed between every consecutive visit.
+* **Concepts Covered:** Window Functions (`LAG()`), Conditional Aggregation (`MIN(CASE ...)`), Filtering Aggregates (`HAVING`), Edge-case handling for single-admission patients.
+
+#### SQL Method
+Uses `LAG()` inside a CTE to find each prior visit's diagnosis. In the outer query, groups by `patient_id` and filters via `HAVING` to verify that the patient has multiple visits (`COUNT(*) > 1`) and zero repeat diagnoses on consecutive admissions (`MIN(...) = 1`).
+
+```sql
+WITH DiagnosisTransitions AS (
+  SELECT 
+    patient_id,
+    diagnosis,
+    LAG(diagnosis) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+    ) AS prev_diagnosis
+  FROM admissions
+)
+SELECT 
+  patient_id
+FROM DiagnosisTransitions
+GROUP BY patient_id
+HAVING 
+  COUNT(*) > 1
+  AND MIN(
+    CASE 
+      WHEN prev_diagnosis IS NULL THEN 1
+      WHEN diagnosis != prev_diagnosis THEN 1 
+      ELSE 0 
+    END
+  ) = 1;
+```
+### 140. Retrieve the `first_name` and `last_name` of the doctor assigned to a patient's latest admission using `FIRST_VALUE()`.
+* **Concepts Covered:** Window Functions (`FIRST_VALUE()`), `JOIN`, Partitioning & Reverse Chronological Sorting, `DISTINCT`.
+
+#### SQL Method
+Joins `admissions` with `doctors` on `attending_doctor_id`. Applies `FIRST_VALUE()` partitioned per `patient_id` and ordered by `admission_date DESC` to retrieve the latest attending doctor, deduplicating records with `DISTINCT`.
+
+```sql
+SELECT DISTINCT
+  a.patient_id,
+  FIRST_VALUE(d.first_name) OVER (
+    PARTITION BY a.patient_id 
+    ORDER BY a.admission_date DESC
+  ) AS doctor_first_name,
+  FIRST_VALUE(d.last_name) OVER (
+    PARTITION BY a.patient_id 
+    ORDER BY a.admission_date DESC
+  ) AS doctor_last_name
+FROM admissions a
+JOIN doctors d 
+  ON a.attending_doctor_id = d.doctor_id;
+```
