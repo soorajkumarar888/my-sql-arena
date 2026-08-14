@@ -2197,3 +2197,35 @@ SELECT
   ) AS volume_tier 
 FROM DoctorVolumes;
 ```
+### 127. For each admission, calculate the number of days since the patient's previous admission (`LAG`).
+* **Concepts Covered:** Date Functions (`DATEDIFF`), Window Functions (`LAG()`), Partitioning (`PARTITION BY`), Sorting (`ORDER BY`).
+
+#### SQL Method
+Uses `LAG(admission_date, 1)` partitioned by `patient_id` and ordered chronologically by `admission_date ASC` to fetch the previous admission date, then applies `DATEDIFF()` to calculate the day gap between consecutive visits.
+
+```sql
+SELECT 
+  patient_id,
+  admission_date,
+  LAG(admission_date, 1) OVER (
+    PARTITION BY patient_id 
+    ORDER BY admission_date ASC
+  ) AS previous_admission_date,
+  DATEDIFF(
+    admission_date, 
+    LAG(admission_date, 1) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+    )
+  ) AS days_since_last_visit
+FROM admissions;
+```
+####  Method step by step understanding
+
+```sql
+with tab as (select patient_id, admission_date, lag(admission_date,1)
+ over(partition by patient_id order by admission_date asc) as previous_date
+from admissions)
+select *, datediff(admission_date,previous_date) as no_of_days from tab;
+```
+
