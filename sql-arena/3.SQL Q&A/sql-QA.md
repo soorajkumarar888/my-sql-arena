@@ -2529,3 +2529,106 @@ FROM admissions a
 JOIN doctors d 
   ON a.attending_doctor_id = d.doctor_id;
 ```
+### 141. Find admissions where the length of stay was shorter than the patient's previous admission's length of stay.
+* **Concepts Covered:** Common Table Expressions (`CTE`), Date Functions (`DATEDIFF`), Window Functions (`LAG()`).
+
+#### SQL Method
+Calculates length of stay in days and retrieves the preceding visit's duration per patient using `LAG()`. The outer query filters for records where the current stay is strictly shorter than the prior stay.
+
+```sql
+WITH StayComparison AS (
+  SELECT 
+    patient_id,
+    admission_date,
+    discharge_date,
+    DATEDIFF(discharge_date, admission_date) AS length_of_stay,
+    LAG(DATEDIFF(discharge_date, admission_date)) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+    ) AS prev_length_of_stay
+  FROM admissions
+)
+SELECT 
+  patient_id,
+  admission_date,
+  discharge_date,
+  length_of_stay,
+  prev_length_of_stay
+FROM StayComparison
+WHERE length_of_stay < prev_length_of_stay;
+```
+### 142. Show the next 2 upcoming admission dates for each patient using LEAD(col, 1) and LEAD(col, 2).
+* **Concepts Covered:** Window Functions (`LEAD()`), Multi-step Offsets, Partitioning & Chronological Ordering.
+
+#### SQL Method
+Uses `LEAD()` with explicit offset parameters `1` and `2` partitioned by `patient_id` and ordered chronologically by `admission_date`.
+
+```sql
+SELECT 
+  patient_id, 
+  admission_date, 
+  LEAD(admission_date, 1) OVER (
+    PARTITION BY patient_id 
+    ORDER BY admission_date ASC
+  ) AS upcoming_first,
+  LEAD(admission_date, 2) OVER (
+    PARTITION BY patient_id 
+    ORDER BY admission_date ASC
+  ) AS upcoming_second
+FROM admissions;
+```
+### 143. Determine if a patient's weight increased or decreased between consecutive hospital visits.
+* **Concepts Covered:** Common Table Expressions (`CTE`), Window Functions (`LAG()`), Conditional Categorization (`CASE WHEN`).
+
+#### SQL Method
+Retrieves the previous visit's weight per patient using `LAG()` ordered chronologically by `admission_date`. Categorizes each subsequent visit into 'Increased', 'Decreased', or 'No Change' using a `CASE WHEN` expression.
+
+```sql
+WITH WeightTransitions AS (
+  SELECT 
+    patient_id,
+    admission_date,
+    weight,
+    LAG(weight) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+    ) AS prev_weight
+  FROM admissions
+)
+SELECT 
+  patient_id,
+  admission_date,
+  weight AS current_weight,
+  prev_weight,
+  CASE 
+    WHEN prev_weight IS NULL THEN 'Initial Visit'
+    WHEN weight > prev_weight THEN 'Increased'
+    WHEN weight < prev_weight THEN 'Decreased'
+    ELSE 'No Change'
+  END AS weight_trend
+FROM WeightTransitions;
+```
+### 144. Find the first and last admission diagnosis for every patient in a single row.
+* **Concepts Covered:** Window Functions (`FIRST_VALUE()`, `LAST_VALUE()`), Window Frame Specification (`ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`), Output Deduplication (`DISTINCT`), String Concatenation (`CONCAT`).
+
+#### SQL Method
+Extracts the earliest diagnosis using `FIRST_VALUE()` and the final diagnosis using `LAST_VALUE()` with a full-partition frame specification. Deduplicates per patient via `DISTINCT` and formats the output into a single string.
+
+```sql
+SELECT DISTINCT
+  patient_id,
+  CONCAT(
+    FIRST_VALUE(diagnosis) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+    ),
+    ' and ',
+    LAST_VALUE(diagnosis) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+      ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    )
+  ) AS first_and_last_diagnosis
+FROM admissions;
+```
+
