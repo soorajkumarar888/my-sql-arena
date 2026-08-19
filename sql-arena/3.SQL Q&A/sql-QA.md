@@ -2631,4 +2631,32 @@ SELECT DISTINCT
   ) AS first_and_last_diagnosis
 FROM admissions;
 ```
+### 145. Calculate the difference between the current patient's height and the average height of the next 3 admitted patients.
+* **Concepts Covered:** Table Joins (`INNER JOIN`), Window Functions (`AVG()`), Explicit Window Frames (`ROWS BETWEEN 1 FOLLOWING AND 3 FOLLOWING`), Numeric Rounding (`ROUND()`).
+
+#### SQL Method
+Joins `admissions` to `patients` to access height data, then uses an explicit forward-looking window frame `ROWS BETWEEN 1 FOLLOWING AND 3 FOLLOWING` ordered by `admission_date` to calculate the moving average and difference.
+
+```sql
+SELECT 
+  a.patient_id,
+  a.admission_date,
+  p.height AS current_height,
+  ROUND(
+    AVG(p.height) OVER (
+      ORDER BY a.admission_date ASC
+      ROWS BETWEEN 1 FOLLOWING AND 3 FOLLOWING
+    ), 
+    2
+  ) AS next_3_avg_height,
+  ROUND(
+    p.height - AVG(p.height) OVER (
+      ORDER BY a.admission_date ASC
+      ROWS BETWEEN 1 FOLLOWING AND 3 FOLLOWING
+    ), 
+    2
+  ) AS height_diff
+FROM admissions a
+JOIN patients p ON a.patient_id = p.patient_id;
+```
 
