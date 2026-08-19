@@ -2659,4 +2659,165 @@ SELECT
 FROM admissions a
 JOIN patients p ON a.patient_id = p.patient_id;
 ```
+### 146. Compare each doctor's monthly admission count against their own previous month's count.
+* **Concepts Covered:** Common Table Expressions (`CTE`), Aggregate Grouping (`GROUP BY`), Window Navigation (`LAG()`), Window Partitioning (`PARTITION BY`).
 
+#### SQL Method
+Aggregates monthly admissions per doctor using a CTE, then calculates Month-over-Month (MoM) variance by subtracting the previous month's count (`LAG()`) from the current month's count partitioned by doctor.
+
+```sql
+WITH tab AS (
+  SELECT 
+    attending_doctor_id,
+    MONTH(admission_date) AS month1, 
+    COUNT(*) AS count1 
+  FROM admissions 
+  GROUP BY 
+    attending_doctor_id,
+    MONTH(admission_date)
+)
+SELECT 
+  attending_doctor_id,
+  month1,
+  count1 AS current_m_count,
+  LAG(count1, 1) OVER (
+    PARTITION BY attending_doctor_id 
+    ORDER BY month1 ASC
+  ) AS previous_m_count,
+  count1 - LAG(count1, 1) OVER (
+    PARTITION BY attending_doctor_id 
+    ORDER BY month1 ASC
+  ) AS diff
+FROM tab;
+```
+### 147. Compute a daily cumulative running total of hospital admissions over time.
+* **Concepts Covered:** Cumulative Aggregates (`SUM() OVER`), Common Table Expressions (`CTE`), Window Framing (`ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`), Group Aggregation (`GROUP BY`).
+
+#### Industry standard SQL Method
+Aggregates admissions by `admission_date` in a CTE, then applies `SUM(daily_count) OVER (ORDER BY admission_date ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)` to generate a strict row-by-row running total.
+
+```sql
+WITH DailyAdmissions AS (
+  SELECT 
+    admission_date,
+    COUNT(*) AS daily_count
+  FROM admissions
+  GROUP BY admission_date
+)
+SELECT 
+  admission_date,
+  daily_count,
+  SUM(daily_count) OVER (
+    ORDER BY admission_date ASC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS cumulative_admissions
+FROM DailyAdmissions;
+```
+#### simple Method
+```sql
+SELECT DISTINCT 
+  admission_date, 
+  COUNT(patient_id) OVER (ORDER BY admission_date) AS cumulativecount 
+FROM admissions;
+```
+### 148. Display each patient's weight alongside their city's average weight and the difference between them.
+* **Concepts Covered:** Window Aggregate Partitioning (`AVG() OVER (PARTITION BY ...)`), Cumulative vs Static Framing, Numeric Precision (`ROUND()`).
+
+#### SQL Method
+Uses `AVG(weight) OVER (PARTITION BY city)` without an `ORDER BY` clause to calculate the static overall city average across all rows, then computes the patient variance.
+
+```sql
+SELECT 
+  patient_id,
+  city,
+  weight,
+  ROUND(AVG(weight) OVER (PARTITION BY city), 2) AS city_avg_weight,
+  ROUND(
+    weight - AVG(weight) OVER (PARTITION BY city), 
+    2
+  ) AS weight_diff
+FROM patients;
+```
+### 149. Calculate a 7-day moving average of daily admission counts.
+* **Concepts Covered:** Common Table Expressions (`CTE`), Group Aggregations (`GROUP BY`), Rolling Window Frames (`ROWS BETWEEN 6 PRECEDING AND CURRENT ROW`), Numeric Rounding (`ROUND()`).
+
+#### SQL Method
+Aggregates daily admissions in a CTE, then computes a 7-day trailing moving average by defining a window frame across the previous 6 days and the current day.
+
+```sql
+WITH DailyAdmissions AS (
+  SELECT 
+    admission_date,
+    COUNT(*) AS daily_count
+  FROM admissions
+  GROUP BY admission_date
+)
+SELECT 
+  admission_date,
+  daily_count,
+  ROUND(
+    AVG(daily_count) OVER (
+      ORDER BY admission_date ASC
+      ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ),
+    2
+  ) AS moving_avg_7day
+FROM DailyAdmissions;
+```
+### 150. Display each admission along with the percentage contribution it represents toward that doctor's total admissions.
+* **Concepts Covered:** Window Partition Aggregates (`SUM() OVER (PARTITION BY ...)`), Ratio-to-Report / Percentage Contribution, Decimal Precision Handling (`100.0`), Common Table Expressions (`CTE`).
+
+#### SQL Method
+Aggregates daily patient visits per doctor in a CTE, then calculates the percentage contribution of each date against the doctor's grand total using an un-ordered partition window sum.
+
+```sql
+WITH DailyDoctorAdmissions AS (
+  SELECT 
+    attending_doctor_id,
+    admission_date,
+    COUNT(*) AS daily_admissions
+  FROM admissions
+  GROUP BY 
+    attending_doctor_id,
+    admission_date
+)
+SELECT 
+  attending_doctor_id,
+  admission_date,
+  daily_admissions,
+  SUM(daily_admissions) OVER (
+    PARTITION BY attending_doctor_id
+  ) AS doctor_total_admissions,
+  ROUND(
+    100.0 * daily_admissions / SUM(daily_admissions) OVER (PARTITION BY attending_doctor_id),
+    2
+  ) AS daily_pct_contribution
+FROM DailyDoctorAdmissions;
+```
+### 151. Calculate the running total count of admissions handled by each doctor, ordered by admission date.
+* **Concepts Covered:** Common Table Expressions (`CTE`), Aggregate Grouping (`GROUP BY`), Cumulative Window Aggregates (`SUM() OVER`), Window Partitioning (`PARTITION BY`).
+
+#### SQL Method
+Pre-aggregates daily admissions per doctor inside a CTE, then applies `SUM(daily_admissions) OVER (PARTITION BY attending_doctor_id ORDER BY admission_date ASC)` to calculate a cumulative running total across dates.
+
+```sql
+WITH DailyDoctorAdmissions AS (
+  SELECT 
+    attending_doctor_id,
+    admission_date,
+    COUNT(*) AS daily_admissions
+  FROM admissions
+  GROUP BY 
+    attending_doctor_id,
+    admission_date
+)
+SELECT 
+  attending_doctor_id,
+  admission_date,
+  daily_admissions,
+  SUM(daily_admissions) OVER (
+    PARTITION BY attending_doctor_id 
+    ORDER BY admission_date ASC
+  ) AS running_total
+FROM DailyDoctorAdmissions;
+```
