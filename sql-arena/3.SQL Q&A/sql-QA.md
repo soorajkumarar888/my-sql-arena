@@ -2821,3 +2821,106 @@ SELECT
   ) AS running_total
 FROM DailyDoctorAdmissions;
 ```
+### 152. Compute a 3-admission rolling average length of stay per patient using `ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING`.
+* **Concepts Covered:** Centered Rolling Windows (`ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING`), Window Aggregations (`AVG() OVER`), Date Arithmetic (`DATEDIFF()`), Partitioning (`PARTITION BY`).
+
+#### SQL Method
+Calculates length of stay per admission using `DATEDIFF`, then computes a 3-admission centered moving average partitioned by each patient.
+
+```sql
+SELECT 
+  patient_id,
+  admission_date,
+  discharge_date,
+  DATEDIFF(discharge_date, admission_date) AS length_of_stay,
+  ROUND(
+    AVG(DATEDIFF(discharge_date, admission_date)) OVER (
+      PARTITION BY patient_id 
+      ORDER BY admission_date ASC
+      ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING
+    ),
+    2
+  ) AS rolling_avg_los_3_admissions
+FROM admissions;
+```
+### 153. Find all patients whose weight is higher than the average weight of patients in their entire province.
+* **Concepts Covered:** Common Table Expressions (`CTE`), Window Aggregate Partitioning (`AVG() OVER (PARTITION BY ...)`), Subquery Filtering (`WHERE`).
+
+#### SQL Method
+Calculates the static province average weight using a partitioned window function inside a CTE, then filters rows in the outer query where individual weight exceeds the partition average.
+
+```sql
+WITH PatientWeights AS (
+  SELECT 
+    patient_id,
+    province_id,
+    weight,
+    ROUND(AVG(weight) OVER (PARTITION BY province_id), 1) AS province_avg_weight
+  FROM patients
+)
+SELECT 
+  patient_id,
+  province_id,
+  weight,
+  province_avg_weight
+FROM PatientWeights
+WHERE weight > province_avg_weight
+ORDER BY province_id;
+```
+### 154. Calculate the maximum height recorded among patients in each province without collapsing rows using `GROUP BY`.
+* **Concepts Covered:** Window Aggregation (`MAX() OVER`), Partitioning (`PARTITION BY`), Non-collapsing Aggregates.
+
+#### SQL Method
+Applies `MAX(height) OVER (PARTITION BY province_id)` to broadcast the province-level maximum height across all individual patient records without reducing row count.
+
+```sql
+SELECT 
+  patient_id,
+  province_id,
+  height,
+  MAX(height) OVER (
+    PARTITION BY province_id
+  ) AS max_province_height
+FROM patients;
+```
+### 155. Determine the percentage of overall hospital admissions accounted for by each province.
+* **Concepts Covered:** Common Table Expressions (`CTE`), Aggregate Grouping (`GROUP BY`), Window Grand Total Aggregation (`SUM() OVER ()`), Percentage Contribution Calculation, Decimal Precision (`100.0`).
+
+#### SQL Method
+Pre-aggregates total admissions per province inside a CTE using `GROUP BY`, then computes the grand total hospital admissions across all rows with `SUM(prcount) OVER ()` to calculate the percentage share with precise float division.
+
+```sql
+WITH ProvinceAdmissions AS (
+  SELECT 
+    p.province_id,
+    COUNT(a.patient_id) AS prcount
+  FROM patients p
+  JOIN admissions a 
+    ON p.patient_id = a.patient_id
+  GROUP BY 
+    p.province_id
+)
+SELECT 
+  province_id,
+  prcount,
+  SUM(prcount) OVER () AS totcount,
+  ROUND(100.0 * prcount / SUM(prcount) OVER (), 1) AS perc
+FROM ProvinceAdmissions;
+```
+### 156. Display each admission along with the total count of admissions that occurred on that exact same day.
+* **Concepts Covered:** Window Functions (`COUNT() OVER`), Window Partitioning (`PARTITION BY`), Broadcasting Aggregates across Transactional Records.
+
+#### SQL Method
+Uses `COUNT(*) OVER (PARTITION BY admission_date)` to broadcast the total volume of daily admissions alongside every individual admission row without collapsing the dataset.
+
+```sql
+SELECT 
+  patient_id,
+  admission_date,
+  discharge_date,
+  COUNT(*) OVER (
+    PARTITION BY admission_date
+  ) AS daily_total_admissions
+FROM admissions;
+```
+
