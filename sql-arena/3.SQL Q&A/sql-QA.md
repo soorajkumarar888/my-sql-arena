@@ -2924,3 +2924,77 @@ SELECT
 FROM admissions;
 ```
 
+### 157. Calculate a running sum of hospital admissions partitioned by province and ordered by date.
+* **Concepts Covered:** Cumulative Aggregations, Window Functions (`COUNT() OVER` / `SUM() OVER`), `PARTITION BY`, `ORDER BY`, Explicit Window Framing (`ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`).
+
+#### SQL Method (Transaction / Row-Level)
+Computes a running row count of admissions per province along the chronological sequence of admission dates.
+
+```sql
+SELECT 
+  p.province_id,
+  a.patient_id,
+  a.admission_date,
+  COUNT(a.patient_id) OVER (
+    PARTITION BY p.province_id 
+    ORDER BY a.admission_date ASC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS running_admissions_count
+FROM patients p
+JOIN admissions a 
+  ON p.patient_id = a.patient_id;
+```
+### 158. Calculate the moving average patient weight over the last 5 admissions ordered chronologically.
+* **Concepts Covered:** Moving / Rolling Averages, Window Framing (`ROWS BETWEEN N PRECEDING AND CURRENT ROW`), Chronological Sorting (`ORDER BY`).
+
+#### SQL Method
+Calculates a 5-point rolling average by looking back 4 preceding rows plus the current row along chronological admission dates.
+
+```sql
+SELECT 
+  a.patient_id, 
+  a.admission_date,
+  p.weight, 
+  ROUND(
+    AVG(p.weight) OVER (
+      ORDER BY a.admission_date ASC
+      ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
+    ), 
+    2
+  ) AS moving_avg_weight
+FROM patients p 
+JOIN admissions a 
+  ON p.patient_id = a.patient_id;
+```
+### 159. Find the overall minimum and maximum height in the dataset alongside each individual patient row.
+* **Concepts Covered:** Global Window Functions (`OVER ()`), Global Broadcast Aggregations, Preservation of Row-Level Granularity.
+
+#### SQL Method
+Utilizes empty window clauses `MIN(height) OVER ()` and `MAX(height) OVER ()` to append dataset-wide extrema onto each individual patient record in a single scan.
+
+```sql
+SELECT 
+  patient_id,
+  height,
+  MIN(height) OVER () AS min_height,
+  MAX(height) OVER () AS max_height
+FROM patients;
+```
+### 160. Compute the ratio of a patient's weight to the total combined weight of all patients in their city.
+* **Concepts Covered:** Window Partitioning (`PARTITION BY`), Broadcast Totals (`SUM() OVER`), Ratio to Total Calculations, Integer Division Prevention (`1.0 *`).
+
+#### SQL Method
+Uses `SUM(weight) OVER (PARTITION BY city)` to calculate total municipal weight across each group, dividing the individual patient's weight with float precision to obtain the exact proportion.
+
+```sql
+SELECT 
+  patient_id, 
+  city, 
+  weight, 
+  SUM(weight) OVER (PARTITION BY city) AS total_weight_city,
+  ROUND(
+    1.0 * weight / SUM(weight) OVER (PARTITION BY city), 
+    4
+  ) AS weight_to_city_ratio
+FROM patients;
+```
