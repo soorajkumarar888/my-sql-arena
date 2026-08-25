@@ -2998,3 +2998,72 @@ SELECT
   ) AS weight_to_city_ratio
 FROM patients;
 ```
+### 161. Calculate the cumulative sum of patients admitted per doctor, resetting the sum at the start of each year.
+* **Concepts Covered:** Composite Partitioning (`PARTITION BY col1, col2`), Date Functions (`YEAR()`), Running Cumulative Totals (`COUNT() OVER`), Explicit Framing (`ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`).
+
+#### SQL Method
+Partitions records simultaneously by `attending_doctor_id` and `YEAR(admission_date)` to automatically reset the sequence annually, applying an ordered window frame to generate the cumulative patient count.
+
+```sql
+SELECT 
+  patient_id,
+  admission_date,
+  YEAR(admission_date) AS admission_year,
+  attending_doctor_id,
+  COUNT(patient_id) OVER (
+    PARTITION BY attending_doctor_id, YEAR(admission_date)
+    ORDER BY admission_date ASC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS cumulative_patient_count
+FROM admissions;
+```
+### 163. Compare each patient's age to the median age of their province.
+* **Concepts Covered:** Multi-level Common Table Expressions (`CTE`), Window Functions (`ROW_NUMBER()`, `COUNT() OVER`), Group-Level Percentile Simulation, Window Partitioning (`PARTITION BY`), Universal Median Computation.
+
+#### SQL Method (Universal Dialect Solution)
+Calculates individual patient ages, ranks them within their respective provinces using `ROW_NUMBER()`, and identifies the exact central row(s) based on partition size to compute the true median before joining back to measure variance.
+
+```sql
+WITH PatientAges AS (
+  SELECT 
+    patient_id,
+    province_id,
+    YEAR(CURRENT_DATE) - YEAR(birth_date) AS age
+  FROM patients
+),
+RankedAges AS (
+  SELECT 
+    patient_id,
+    province_id,
+    age,
+    ROW_NUMBER() OVER (
+      PARTITION BY province_id 
+      ORDER BY age ASC
+    ) AS row_num,
+    COUNT(*) OVER (
+      PARTITION BY province_id
+    ) AS total_patients
+  FROM PatientAges
+),
+ProvinceMedians AS (
+  SELECT 
+    province_id,
+    ROUND(AVG(age * 1.0), 1) AS median_age
+  FROM RankedAges
+  WHERE row_num IN (
+    (total_patients + 1) / 2,
+    (total_patients + 2) / 2
+  )
+  GROUP BY 
+    province_id
+)
+SELECT 
+  pa.patient_id,
+  pa.province_id,
+  pa.age,
+  pm.median_age AS province_median_age,
+  ROUND(pa.age - pm.median_age, 1) AS diff_from_median
+FROM PatientAges pa
+JOIN ProvinceMedians pm 
+  ON pa.province_id = pm.province_id;
+```
