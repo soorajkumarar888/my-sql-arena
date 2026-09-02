@@ -3067,3 +3067,137 @@ FROM PatientAges pa
 JOIN ProvinceMedians pm 
   ON pa.province_id = pm.province_id;
 ```
+### 164. Find the total count of distinct diagnoses seen up to the current row per doctor.
+* **Concepts Covered:** Cumulative Distinct Aggregation, Multi-level Window Functions (`ROW_NUMBER()` + `SUM() OVER`), Conditional Flagging (`CASE WHEN`), Window Framing (`ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`).
+
+#### SQL Method
+Circumvents SQL's restriction on `COUNT(DISTINCT)` within window frames by identifying the initial appearance of each diagnosis per doctor with `ROW_NUMBER()`, then computing a cumulative running total over the flagged indicators.
+
+```sql
+WITH FlaggedDiagnoses AS (
+  SELECT 
+    attending_doctor_id,
+    admission_date,
+    diagnosis,
+    patient_id,
+    CASE 
+      WHEN ROW_NUMBER() OVER (
+        PARTITION BY attending_doctor_id, diagnosis 
+        ORDER BY admission_date ASC, patient_id ASC
+      ) = 1 THEN 1 
+      ELSE 0 
+    END AS is_new_diagnosis
+  FROM admissions
+)
+SELECT 
+  attending_doctor_id,
+  admission_date,
+  patient_id,
+  diagnosis,
+  SUM(is_new_diagnosis) OVER (
+    PARTITION BY attending_doctor_id 
+    ORDER BY admission_date ASC, patient_id ASC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS cumulative_distinct_diagnoses
+FROM FlaggedDiagnoses;
+```
+### 165. Calculate the standard deviation of patient heights within each province using STDDEV() OVER().
+* **Concepts Covered:** Statistical Window Functions (`STDDEV_SAMP()` / `STDEV()`), Partitioning (`PARTITION BY`), Population vs. Sample Variance, Non-collapsing Aggregation.
+
+#### SQL Method (PostgreSQL / MySQL 8.0+ / Snowflake)
+Calculates both the average and sample standard deviation of patient heights partitioned by province, preserving all individual patient rows alongside regional variance metrics.
+
+```sql
+SELECT 
+  patient_id,
+  province_id,
+  height,
+  ROUND(
+    STDDEV_SAMP(height) OVER (PARTITION BY province_id), 
+    2
+  ) AS province_height_stddev,
+  ROUND(
+    AVG(height) OVER (PARTITION BY province_id), 
+    2
+  ) AS province_avg_height
+FROM patients
+WHERE height IS NOT NULL;
+```
+### 166. Calculate a centered 5-day moving average of daily admission volumes (2 PRECEDING AND 2 FOLLOWING).
+* **Concepts Covered:** Common Table Expressions (`CTE`), Time-Series Aggregation, Window Framing (`ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING`), Centered Moving Averages, Smoothing Volatility.
+
+#### SQL Method
+Aggregates total patient admissions by date, then computes a symmetric 5-day moving average using explicit preceding and following frame boundaries to smooth daily fluctuations.
+
+```sql
+WITH DailyAdmissions AS (
+  SELECT 
+    admission_date,
+    COUNT(*) AS daily_volume
+  FROM admissions
+  GROUP BY 
+    admission_date
+)
+SELECT 
+  admission_date,
+  daily_volume,
+  ROUND(
+    AVG(daily_volume * 1.0) OVER (
+      ORDER BY admission_date ASC
+      ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING
+    ), 
+    2
+  ) AS centered_5day_moving_avg
+FROM DailyAdmissions
+ORDER BY 
+  admission_date ASC;
+```
+### 167. Use a CTE with `ROW_NUMBER()` to delete or filter out duplicate patient records while keeping the earliest ID.
+* **Concepts Covered:** CTE Data Cleansing, Window Partitioning over Natural Keys, Deduplication Logic (`ROW_NUMBER()`), Deterministic Ordering (`ORDER BY id ASC`).
+
+#### Key Logic
+- **`PARTITION BY` (Natural Key):** Groups rows sharing identical demographic identifiers (`first_name`, `last_name`, `birth_date`).
+- **`ORDER BY patient_id ASC`:** Guarantees the original/earliest surrogate key receives rank `1`.
+- **`WHERE row_num = 1`:** Retains exactly one master copy and discards all subsequent duplicate occurrences.
+
+```sql
+-- Read-only filter
+WITH RankedPatients AS (
+  SELECT 
+    *,
+    ROW_NUMBER() OVER (
+      PARTITION BY first_name, last_name, birth_date 
+      ORDER BY patient_id ASC
+    ) AS row_num
+  FROM patients
+)
+SELECT * 
+FROM RankedPatients 
+WHERE row_num = 1;
+```
+### 168. Find doctors who have treated patients from every single province in the database.
+* **Concepts Covered:** Relational Division, Multi-table Joins, Aggregation with `COUNT(DISTINCT)`, Dynamic Subqueries in `HAVING`, Universal Quantification (`NOT EXISTS` double negation).
+
+#### SQL Method (Aggregation & Dynamic Subquery)
+Joins doctor admissions to patient records and groups by doctor, verifying that the distinct count of provinces treated matches the total row count of the province reference table.
+
+```sql
+SELECT 
+  d.doctor_id,
+  d.first_name,
+  d.last_name
+FROM doctors d
+JOIN admissions a 
+  ON d.doctor_id = a.attending_doctor_id
+JOIN patients p 
+  ON a.patient_id = p.patient_id
+GROUP BY 
+  d.doctor_id,
+  d.first_name,
+  d.last_name
+HAVING 
+  COUNT(DISTINCT p.province_id) = (
+    SELECT COUNT(*) 
+    FROM province_names
+  );
+```
